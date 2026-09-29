@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 .claude/launch.json
-out/
-projects/
+/out/
+# saved iterations written by app/server.py (data/projects/ IS tracked)
+/projects/
 *.pdf
