@@ -1,0 +1,10 @@
+# firm-derived project data and the tests that quote it stay local; never published
+private/
+
+__pycache__/
+.pytest_cache/
+.venv/
+.claude/launch.json
+out/
+projects/
+*.pdf

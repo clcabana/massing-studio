@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Massing Studio</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/vendor/leaflet.css">
+<style>
+:root{--paper:#f4f3ee;--sheet:#fff;--ink:#1e2126;--ink2:#4b5563;--mut:#7a8291;--rule:#d9d8d1;--mark:#c8352b;--mark-soft:#fbe9e7;--ok:#1d7a46;--ok-soft:#e3f3e9;--blue:#1d4f9c;--blue-soft:#e3eefc;--warn:#b26b00;--warn-soft:#fff3d6;--grid:#e8e6df;--sky:#eef0f3}
+:root[data-theme="dark"]{--paper:#12151a;--sheet:#1a1e25;--ink:#e6e8eb;--ink2:#b6bcc7;--mut:#8b93a1;--rule:#2b313b;--mark:#f0786d;--mark-soft:#3a2321;--ok:#5ec98a;--ok-soft:#1d3327;--blue:#8fb4f0;--blue-soft:#1f2f4a;--warn:#e0a437;--warn-soft:#3a2f14;--grid:#232830;--sky:#0f1318}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--paper:#12151a;--sheet:#1a1e25;--ink:#e6e8eb;--ink2:#b6bcc7;--mut:#8b93a1;--rule:#2b313b;--mark:#f0786d;--mark-soft:#3a2321;--ok:#5ec98a;--ok-soft:#1d3327;--blue:#8fb4f0;--blue-soft:#1f2f4a;--warn:#e0a437;--warn-soft:#3a2f14;--grid:#232830;--sky:#0f1318} }
+*{box-sizing:border-box} html,body{height:100%;margin:0}
+body{background:var(--paper);color:var(--ink);font:13px/1.4 "IBM Plex Sans",system-ui,sans-serif;display:grid;grid-template-rows:auto 1fr;height:100vh;overflow:hidden;transition:background .25s,color .25s}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+header{display:flex;align-items:center;gap:12px;padding:8px 14px;background:var(--sheet);border-bottom:1.5px solid var(--ink)}
+header h1{font:600 17px "IBM Plex Sans Condensed",sans-serif;margin:0;letter-spacing:.01em} header h1 small{font:500 10px "IBM Plex Mono",monospace;color:var(--mut);margin-left:6px;vertical-align:middle} header .sp{flex:1}
+header input{font:inherit;padding:4px 8px;border:1px solid var(--rule);border-radius:3px;min-width:220px;background:var(--sheet);color:var(--ink)}
+button{font:inherit;padding:5px 10px;border:1px solid var(--ink);background:var(--sheet);color:var(--ink);border-radius:3px;cursor:pointer;transition:background .15s} button:hover{background:var(--paper)} button.pri{background:var(--ink);color:var(--sheet)} button.pri:hover{opacity:.9} button.sm{padding:2px 7px;font-size:12px} button:disabled{opacity:.4;cursor:default} button.ghost{border-color:var(--rule);color:var(--ink2)}
+main{display:grid;grid-template-columns:minmax(380px,1.15fr) 350px minmax(380px,1fr);gap:0;min-height:0}
+.col{min-height:0;overflow:auto;border-right:1px solid var(--rule);background:var(--sheet)} .col:last-child{border-right:0;background:var(--paper)}
+.pane{padding:10px 12px;border-bottom:1px solid var(--rule)} .pane h2{font:600 11.5px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:0 0 8px;display:flex;align-items:center;gap:8px} .pane h2 .sp{flex:1}
+#plan{width:100%;aspect-ratio:1/1;max-height:56vh;display:block;background:var(--sheet);touch-action:none;user-select:none}
+#three{width:100%;height:380px;display:block;background:var(--sky);border-radius:3px;cursor:grab} #three:active{cursor:grabbing}
+.sun{display:grid;grid-template-columns:auto 1fr auto 1fr auto;gap:6px 8px;align-items:center;font-size:11.5px;color:var(--ink2);margin-top:6px} .sun input[type=range]{width:100%}
+.lotEdge{cursor:pointer} .lotEdge text{font:2.3px "IBM Plex Mono",monospace;fill:var(--ink2)} .lotEdge rect{fill:var(--sheet);stroke:var(--rule)}
+.lotSeg{stroke-width:.9} .lotSeg.street{stroke:#c8352b} .lotSeg.lane{stroke:#b26b00;stroke-dasharray:1.2 .6} .lotSeg.neighbour{stroke:var(--ink);stroke-dasharray:1.6 .8}
+.blk{fill:rgba(42,120,214,.16);stroke:var(--blue);stroke-width:1.2;cursor:move} .blk.sel{fill:rgba(42,120,214,.28);stroke-width:2} .blk.ghost{fill:none;stroke:var(--blue);stroke-width:.5;stroke-dasharray:1 .8;pointer-events:none;opacity:.7}
+.hole{fill:var(--sheet);stroke:var(--blue);stroke-width:1;stroke-dasharray:1.4 .7;cursor:move} .ctx{fill:rgba(128,128,128,.22);stroke:var(--mut);stroke-width:.7;cursor:move} .ctx.sel{stroke:var(--ink);stroke-width:1.2}
+.vtx{fill:var(--sheet);stroke:var(--blue);stroke-width:1.5;cursor:grab} .vtx:hover{fill:var(--blue)} .vtx.h{stroke-dasharray:.8 .5}
+.edgeLbl{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink2);pointer-events:none} .ctxLbl{font:2.2px "IBM Plex Sans",sans-serif;fill:var(--mut);pointer-events:none}
+.field{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;margin:4px 0} .field label{color:var(--ink2)} .field input,.field select{font:inherit;padding:3px 6px;border:1px solid var(--rule);border-radius:3px;width:120px;text-align:right;background:var(--sheet);color:var(--ink)}
+.field select{text-align:left}
+.storey{display:grid;grid-template-columns:22px 58px 1fr 52px 48px 48px 22px;gap:4px;align-items:center;margin:3px 0} .storey input,.storey select{font:inherit;padding:2px 4px;border:1px solid var(--rule);border-radius:3px;width:100%;background:var(--sheet);color:var(--ink)}
+.storey .n{color:var(--mut);font-size:11px;cursor:pointer} .storey.edit .n{color:var(--blue);font-weight:600} .storey .x{border:0;background:none;color:var(--mut);cursor:pointer;padding:0} .storey.own .n:after{content:"◧";margin-left:2px;font-size:9px}
+.sub-h{margin-top:10px;display:flex;align-items:center;gap:8px;font-weight:600;font-size:12px} .sub-h .sp{flex:1}
+.card{background:var(--sheet);border:1px solid var(--rule);padding:10px 12px;margin:10px 12px;border-radius:4px}
+.card h3{margin:0 0 6px;font:600 14px "IBM Plex Sans Condensed",sans-serif;display:flex;gap:8px;align-items:baseline} .card h3 .art{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--blue)} .card h3 .sp{flex:1}
+.tg{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px} .tg th{font-weight:500;color:var(--mut);text-align:left;padding:2px 4px;border-bottom:1px solid var(--rule)} .tg td{padding:2px 4px;border-bottom:1px solid var(--rule);vertical-align:top}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12.5px} .kv .k{color:var(--mut)}
+.gauge{margin:6px 0} .gauge .t{display:flex;justify-content:space-between;font-size:12px} .gauge .bar{height:8px;background:var(--rule);border-radius:4px;overflow:hidden;margin-top:2px} .gauge .bar i{display:block;height:100%;background:var(--blue);transition:width .45s cubic-bezier(.2,.8,.2,1),background .3s} .gauge.tight .bar i{background:var(--warn)} .gauge.over .bar i{background:var(--mark)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px} .chip{font-size:11px;padding:1px 7px;border-radius:999px;background:var(--blue-soft);color:var(--blue);white-space:nowrap} .chip.no{background:var(--mark-soft);color:var(--mark)} .chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.mut{background:var(--paper);color:var(--mut)}
+.face{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:5px 0;border-top:1px solid var(--rule);font-size:12px} .face:first-of-type{border-top:0} .face .nm{font-weight:500} .face .req{color:var(--ink2);grid-column:1/-1}
+.flag{color:var(--mark);font-size:12px;margin:3px 0;padding-left:14px;position:relative} .flag:before{content:"⚠";position:absolute;left:0} .flag.info{color:var(--warn)} .note{color:var(--ink2);font-size:12px;margin:3px 0;padding-left:14px;position:relative} .note:before{content:"·";position:absolute;left:4px}
+.status{font-size:11.5px;color:var(--mut)} .status.busy{color:var(--warn)} .status.err{color:var(--mark)}
+.lib .it{display:grid;grid-template-columns:56px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--rule);cursor:pointer} .lib .it:hover{background:var(--paper)} .lib img{width:56px;height:40px;object-fit:cover;border:1px solid var(--rule);background:#eee} .lib .nm{font-weight:500} .lib .sub{color:var(--mut);font-size:11.5px} .lib .it.cmp{outline:2px solid var(--blue);outline-offset:-2px}
+table.cmp{width:100%;border-collapse:collapse;font-size:12px} table.cmp th,table.cmp td{text-align:left;padding:3px 6px;border-bottom:1px solid var(--rule)} table.cmp th{color:var(--mut);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+dialog{border:1.5px solid var(--ink);border-radius:4px;padding:14px 16px;font:inherit;width:360px;background:var(--sheet);color:var(--ink)} dialog::backdrop{background:rgba(0,0,0,.45)} dialog input,dialog textarea{width:100%;font:inherit;padding:4px 6px;border:1px solid var(--rule);border-radius:3px;margin:4px 0 10px;background:var(--sheet);color:var(--ink)}
+.hint{font-size:11.5px;color:var(--mut);margin-top:6px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--ink2)} .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--sheet);padding:8px 14px;border-radius:4px;font-size:12.5px;opacity:0;transition:all .3s;pointer-events:none;z-index:50} .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+kbd{font:11px "IBM Plex Mono",monospace;border:1px solid var(--rule);border-bottom-width:2px;border-radius:3px;padding:0 4px;color:var(--ink2)}
+#rhinoPane .row{display:flex;gap:6px;align-items:center;margin:4px 0} #rhinoPane input[type=text]{flex:1;font:inherit;padding:3px 6px;border:1px solid var(--rule);border-radius:3px;background:var(--sheet);color:var(--ink)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mut);margin-right:5px;vertical-align:middle} .dot.on{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)} .dot.err{background:var(--mark)}
+/* wizard */
+#dlgWiz{width:560px;max-width:92vw} #dlgWiz .whead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px} #dlgWiz .wtitle{font:600 12px "IBM Plex Sans";text-transform:uppercase;letter-spacing:.08em;color:var(--mut)} #dlgWiz .wprog{font-size:11.5px;color:var(--mut)}
+#dlgWiz h3{margin:6px 0 4px;font:600 17px "IBM Plex Sans Condensed",sans-serif} .whelp{color:var(--ink2);font-size:12.5px;margin:0 0 10px}
+.wopts{display:grid;gap:6px;margin:8px 0} .wopt{display:grid;grid-template-columns:18px 1fr;gap:2px 10px;align-items:start;padding:8px 10px;border:1px solid var(--rule);border-radius:4px;cursor:pointer;background:var(--sheet)} .wopt.on{border-color:var(--blue);background:var(--blue-soft)} .wopt input{margin-top:3px} .wopt .wl{font-weight:500} .wopt .wd{grid-column:2;color:var(--ink2);font-size:12px}
+.wcustom{display:flex;gap:8px;align-items:center;color:var(--ink2);font-size:12.5px;margin-top:4px} .wcustom input{width:120px}
+.wfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:14px} .wfoot .wcancel{margin-right:auto;border-color:var(--rule);color:var(--mut)}
+#dlgMap{width:900px;max-width:96vw} #map{width:100%;height:520px;border:1px solid var(--rule)} .maptools{display:flex;gap:8px;align-items:center;margin:8px 0} .maptools input{flex:1;font:inherit;padding:4px 6px;border:1px solid var(--rule);border-radius:3px}
+/* summary */
+#dlgSum{width:min(1100px,96vw);max-height:92vh;overflow:auto} .sumhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1.5px solid var(--ink);padding-bottom:8px;margin-bottom:10px} .sumhead h2{margin:0;font:600 18px "IBM Plex Sans Condensed",sans-serif}
+#dlgSum section{margin:12px 0} #dlgSum h3{font:600 13px "IBM Plex Sans",sans-serif;margin:0 0 4px;display:flex;gap:6px;align-items:baseline} #dlgSum h3 .n{background:var(--ink);color:var(--sheet);font-size:10px;padding:0 5px;border-radius:2px}
+table.sum{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed} table.sum th{text-align:left;font-weight:500;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--ink);padding:3px 5px}
+table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:top;overflow-wrap:anywhere} table.sum td.blk{width:7%;color:var(--mut);font-size:10px;text-transform:uppercase} table.sum td.val{width:16%} table.sum td.why{width:44%;color:var(--ink2);font-size:11px} table.sum td.ref{width:17%}
+.cite{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--blue);background:var(--blue-soft);padding:0 5px;border-radius:3px;margin:1px 2px 1px 0} sup.fl{color:var(--mark)} ul.fl{margin:0;padding-left:16px;font-size:12px} ul.fl li{margin:2px 0}
+@media print{ body>*:not(#dlgSum){display:none!important} #dlgSum{position:static;border:0;max-height:none;width:auto} .sumhead button{display:none} }
+@media (max-width:900px){ body{height:auto;overflow:auto;display:block} main{display:block} .col{border-right:0;border-bottom:1px solid var(--rule)} header{flex-wrap:wrap} header input{min-width:160px;flex:1} #plan{max-height:none} }
+</style></head>
+<body>
+<header>
+  <h1>Massing Studio<small>VBBL 2025</small></h1>
+  <input id="projName" value="Untitled massing" title="Project name — iterations are grouped by it">
+  <span class="status" id="status">ready</span>
+  <span class="sp"></span>
+  <button class="sm ghost" id="btnUndo" title="Undo (Ctrl/⌘ Z)">↶</button><button class="sm ghost" id="btnRedo" title="Redo (Ctrl/⌘ Shift Z)">↷</button>
+  <button class="sm ghost" id="btnTheme" title="Light / dark">◐</button>
+  <button class="sm" id="btnWizard">Start / new site…</button>
+  <button class="sm" id="btnExample" style="display:none">Load example</button>
+  <button class="sm" id="btnNew" style="display:none">New lot</button>
+  <button class="sm" id="btnSummary">Code summary</button>
+  <button class="pri" id="btnSave">Save iteration…</button>
+</header>
+<main>
+  <div class="col">
+    <div class="pane">
+      <h2>Plan <span class="sp"></span><span class="legend"><span><i style="background:#2a78d6"></i>C</span><span><i style="background:#eb6834"></i>A2</span><span><i style="background:#e87ba4"></i>E</span><span><i style="background:#eda100"></i>D</span><span><i style="background:#1baf7a"></i>F3</span></span></h2>
+      <svg id="plan" viewBox="0 0 100 100"></svg>
+      <div class="hint">Drag a corner to reshape, drag a body to move, double-click an edge to add a corner, <kbd>Alt</kbd>-click a corner to remove it. Click a storey number in the Blocks panel to edit that storey's own outline. Click a lot edge label to cycle street / lane / neighbour. <kbd>⌘Z</kbd> undo.</div>
+    </div>
+    <div class="pane"><h2>3D <span class="sp"></span><label class="status"><input type="checkbox" id="chkShadows" checked> shadows</label><label class="status"><input type="checkbox" id="chkFaces" checked> face check</label></h2>
+      <canvas id="three"></canvas>
+      <div class="sun"><span>Sun</span><input type="range" id="sunAz" min="0" max="360" value="215" title="azimuth"><span id="sunAzV" class="mono">215°</span><input type="range" id="sunAlt" min="5" max="85" value="48" title="altitude"><span id="sunAltV" class="mono">48°</span></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="pane">
+      <h2>Lot</h2>
+      <div class="field"><label>Width (m, east–west)</label><input id="lotW" type="number" step="0.1" min="3"></div>
+      <div class="field"><label>Depth (m, north–south)</label><input id="lotD" type="number" step="0.1" min="3"></div>
+      <div class="field"><label>Grade elevation (m)</label><input id="grade" type="number" step="0.01"></div>
+      <div class="field"><label>Sprinklered throughout</label><select id="spr"><option value="1">yes</option><option value="0">no</option></select></div>
+      <div id="edgeFields"></div>
+    </div>
+    <div class="pane">
+      <h2>Blocks <span class="sp"></span><button class="sm pri" id="btnAddBlockWiz">+ block…</button><button class="sm" id="btnAddBlock" title="quick add without the questionnaire">quick</button><button class="sm" id="btnDelBlock">delete</button></h2>
+      <div id="blockTabs" class="chips"></div>
+      <div id="blockPanel"></div>
+    </div>
+    <div class="pane">
+      <h2>Context <span class="sp"></span><button class="sm" id="btnAddCtx">+ neighbour</button></h2>
+      <div id="ctxPanel"></div>
+    </div>
+    <div class="pane" id="rhinoPane">
+      <h2>Rhino <span class="sp"></span><span class="status" id="rhStatus"><span class="dot"></span>not linked</span></h2>
+      <div class="row"><input type="text" id="rhPath" placeholder="path to site.3dm (default: projects/<name>/rhino/…)"></div>
+      <div class="row"><button class="sm pri" id="rhExport">Export .3dm</button><button class="sm" id="rhDownload">Download</button><button class="sm" id="rhImport">Import now</button><label class="status" style="margin-left:auto"><input type="checkbox" id="rhWatch"> watch file</label></div>
+      <div class="hint">Layers: <span class="mono">Site</span> (property line, lot edges, ROW centrelines, setbacks, grade at z = 0), <span class="mono">Context</span>, <span class="mono">Massing::&lt;Block&gt;::L1…</span> one extrusion per storey with user text (occupancy, use, beds, units). Edit or add solids under a block's layer, Save in Rhino, and the analysis updates here.</div>
+      <div id="rhWarn"></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div id="results"></div>
+    <div class="card lib">
+      <h3>Saved iterations <span class="sp"></span><button class="sm" id="btnCompare" disabled>Compare selected</button></h3>
+      <div class="hint">Click to reopen. Shift-click to select up to three for comparison. Saved iterations are kept <span id="libWhere">in the project's <span class="mono">iterations/</span> folder</span>; each carries its spec, results and a code summary.</div>
+      <div id="libList"></div>
+      <div id="cmp"></div>
+    </div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<dialog id="dlgSave"><form method="dialog">
+  <h3 style="margin:0 0 8px">Save this massing</h3>
+  <label>Name</label><input id="svName" required placeholder="e.g. Option B — 5 storeys, step back on lane">
+  <label>Note</label><textarea id="svNote" rows="3" placeholder="What you were testing"></textarea>
+  <div style="display:flex;gap:8px;justify-content:flex-end"><button value="cancel">Cancel</button><button class="pri" value="ok">Save</button></div>
+</form></dialog>
+<dialog id="dlgWiz"><div class="whead"><span class="wtitle"></span><span class="wprog"></span></div><div class="wbody"></div>
+  <div class="wfoot"><button class="wcancel">Cancel</button><button class="wback">Back</button><button class="pri wnext">Next</button></div></dialog>
+<dialog id="dlgMap"><h3 style="margin:0 0 4px">Pick a site</h3><div class="hint" style="margin:0 0 6px">Pan and zoom to the block, then click a parcel. Red lines are street centrelines, dashed amber are lanes (City of Vancouver Open Data). Edge types and right-of-way widths are read from them; check them in the Lot panel afterwards.</div>
+  <div class="maptools"><input id="mapLatLon" placeholder="jump to lat, lon — e.g. 49.263, -123.155"><button class="sm" id="mapGo">Go</button><span class="status" id="mapStatus"></span><button class="sm" id="mapCancel" style="margin-left:auto">Cancel</button></div>
+  <div id="map"></div></dialog>
+<dialog id="dlgSum"><div class="sumbody"></div></dialog>
+
+<script src="/vendor/leaflet.js"></script>
+<script src="/vendor/three.min.js"></script>
+<script>
+// ------------------------------------------------------------------ state
+const OCC = ["C","A2","E","D","F3","A1","B2","F2"];
+const OCC_COLOR = {C:"#2a78d6",A2:"#eb6834",E:"#e87ba4",D:"#eda100",F3:"#1baf7a",A1:"#c6521f",B2:"#4a3aa7",F2:"#008300"};
+let spec = newSpec();
+let sel = 0;            // selected block index
+let editStorey = null;  // null = block outline, else 1-based storey number being edited
+let ctxSel = null;      // selected context building
+let results = null;
+let compareSel = [];
+const $ = s => document.querySelector(s);
+const snap = v => Math.round(v*10)/10;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const fmt=v=>typeof v==="number"?(Number.isInteger(v)?v.toLocaleString():v.toLocaleString(undefined,{maximumFractionDigits:2})):v;
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function newSpec(){
+  return {project_name:"Untitled massing", sprinklered:true, chosen_articles:{}, context:[],
+    lot:{width_m:15.24, depth_m:37.19, grade_m:10, edges:{south:{kind:"street",row_width_m:20}, north:{kind:"lane",row_width_m:6}, east:{kind:"neighbour",row_width_m:0}, west:{kind:"neighbour",row_width_m:0}}},
+    blocks:[{name:"A", footprint:[[0,0],[15.24,0],[15.24,30],[0,30]], holes:[], roof:{parapet_m:0.6,enclosure:null,balconies:[]}, first_floor_above_grade_m:0.1, default_glazing_pct:30, glazing_pct_by_edge:{},
+      storeys:[{occupancy:"E",use:"retail CRU",floor_to_floor_m:3.5},{occupancy:"C",use:"apartment suites",floor_to_floor_m:3},{occupancy:"C",use:"apartment suites",floor_to_floor_m:3},{occupancy:"C",use:"apartment suites",floor_to_floor_m:3}]}]};
+}
+function normalize(s){ (s.blocks||[]).forEach(b=>{ b.glazing_pct_by_edge=b.glazing_pct_by_edge||{}; b.holes=b.holes||[]; b.roof=b.roof||{parapet_m:0.6,enclosure:null,balconies:[]}; b.roof.balconies=b.roof.balconies||[]; }); s.context=s.context||[]; s.chosen_articles=s.chosen_articles||{}; return s; }
+function polyArea(fp){ let s=0; for(let i=0;i<fp.length;i++){const p=fp[i],q=fp[(i+1)%fp.length]; s+=p[0]*q[1]-q[0]*p[1];} return Math.abs(s)/2; }
+function bbox(pts){ const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]); return [Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)]; }
+function insetPoly(pts,d){ const [x0,y0,x1,y1]=bbox(pts); const cx=(x0+x1)/2, cy=(y0+y1)/2; const sx=Math.max(0.1,(x1-x0-2*d)/(x1-x0)), sy=Math.max(0.1,(y1-y0-2*d)/(y1-y0)); return pts.map(p=>[snap(cx+(p[0]-cx)*sx), snap(cy+(p[1]-cy)*sy)]); }
+// what the plan editor is currently editing: the block outline or one storey's own outline
+function editTarget(){ const b=spec.blocks[sel]; if(!b) return null; if(editStorey!=null){ const st=b.storeys[editStorey-1]; if(st&&st.footprint) return {pts:st.footprint, holes:st.holes!=null?st.holes:b.holes, owner:st, label:`L${editStorey}`}; } return {pts:b.footprint, holes:b.holes, owner:b, label:"block"}; }
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),2600); }
+
+// ------------------------------------------------------------------ history (undo / redo)
+const hist={past:[],future:[],last:null};
+function pushHistory(){ const j=JSON.stringify(spec); if(j===hist.last) return; if(hist.last) hist.past.push(hist.last); if(hist.past.length>120) hist.past.shift(); hist.last=j; hist.future=[]; updateHistBtns(); }
+function undo(){ if(!hist.past.length) return; hist.future.push(hist.last); hist.last=hist.past.pop(); spec=normalize(JSON.parse(hist.last)); sel=Math.min(sel,spec.blocks.length-1); editStorey=null; changed(true,true); toast("undo"); }
+function redo(){ if(!hist.future.length) return; hist.past.push(hist.last); hist.last=hist.future.pop(); spec=normalize(JSON.parse(hist.last)); sel=Math.min(sel,spec.blocks.length-1); editStorey=null; changed(true,true); toast("redo"); }
+function updateHistBtns(){ $("#btnUndo").disabled=!hist.past.length; $("#btnRedo").disabled=!hist.future.length; }
+document.addEventListener("keydown",e=>{ if(e.target.matches("input,textarea,select")) return; const k=e.key.toLowerCase(); if((e.metaKey||e.ctrlKey)&&k==="z"){ e.preventDefault(); e.shiftKey?redo():undo(); } else if((e.metaKey||e.ctrlKey)&&k==="y"){ e.preventDefault(); redo(); } else if(k==="escape"){ editStorey=null; ctxSel=null; drawPlan(); drawBlockPanel(); } });
+$("#btnUndo").onclick=undo; $("#btnRedo").onclick=redo;
+
+// ------------------------------------------------------------------ theme
+const themeKey="massing-studio-theme";
+function applyTheme(t){ document.documentElement.dataset.theme=t; try{ localStorage.setItem(themeKey,t); }catch(e){} if(typeof render3d==="function") setTimeout(render3d,0); }
+try{ const t=localStorage.getItem(themeKey); if(t) document.documentElement.dataset.theme=t; }catch(e){}
+$("#btnTheme").onclick=()=>{ const cur=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"); applyTheme(cur==="dark"?"light":"dark"); };
+const isDark=()=>{ const t=document.documentElement.dataset.theme; return t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches; };
+
+// ------------------------------------------------------------------ plan editor (SVG)
+const svg = $("#plan");
+let drag = null;
+function planExtent(){ const L=spec.lot; let x0=0,y0=0,x1=L.width_m,y1=L.depth_m; if(L.polygon){ [x0,y0,x1,y1]=bbox(L.polygon); }
+  for(const c of spec.context||[]){ const [a,b,c2,d]=bbox(c.footprint); x0=Math.min(x0,a); y0=Math.min(y0,b); x1=Math.max(x1,c2); y1=Math.max(y1,d); }
+  const E=L.edges||{}; if(!L.polygon){ x0=Math.min(x0,-(E.west?.row_width_m||0)/2-1); x1=Math.max(x1,L.width_m+(E.east?.row_width_m||0)/2+1); y0=Math.min(y0,-(E.south?.row_width_m||0)/2-1); y1=Math.max(y1,L.depth_m+(E.north?.row_width_m||0)/2+1); }
+  return [x0,y0,x1,y1]; }
+function planScale(){ const [x0,y0,x1,y1]=planExtent(); const span=Math.max(x1-x0,y1-y0); const pad=span*0.06; const size=span+2*pad; const cx=(x0+x1)/2, cy=(y0+y1)/2; return {size,ox:cx-size/2,oy:cy-size/2}; }
+function toSvg(x,y){ const {size,ox,oy}=planScale(); return [ (x-ox)/size*100, 100-(y-oy)/size*100 ]; }
+function fromSvg(sx,sy){ const {size,ox,oy}=planScale(); return [ sx/100*size+ox, (100-sy)/100*size+oy ]; }
+function clientToSvg(ev){ const r=svg.getBoundingClientRect(); return [ (ev.clientX-r.left)/r.width*100, (ev.clientY-r.top)/r.height*100 ]; }
+const ptsAttr=pts=>pts.map(p=>toSvg(p[0],p[1]).join(",")).join(" ");
+
+function drawPlan(){
+  const L=spec.lot; const {size,ox,oy}=planScale(); const s=100/size;
+  let h="";
+  const [ex0,ey0,ex1,ey1]=planExtent();
+  for(let g=Math.floor(ex0/5)*5; g<=ex1+5; g+=5){ const [gx]=toSvg(g,0); h+=`<line x1="${gx}" y1="0" x2="${gx}" y2="100" stroke="var(--grid)" stroke-width=".25"/>`; }
+  for(let g=Math.floor(ey0/5)*5; g<=ey1+5; g+=5){ const [,gy]=toSvg(0,g); h+=`<line x1="0" y1="${gy}" x2="100" y2="${gy}" stroke="var(--grid)" stroke-width=".25"/>`; }
+  const band=(kind)=> kind==="street"?"rgba(200,53,43,.08)":kind==="lane"?"rgba(180,140,40,.14)":"none";
+  const E=L.edges;
+  const [x0,y0]=toSvg(0,0), [x1,y1]=toSvg(L.width_m,L.depth_m);
+  if(!L.polygon){ h+=`<rect x="${x0}" y="${y1-E.north.row_width_m*s}" width="${x1-x0}" height="${E.north.row_width_m*s}" fill="${band(E.north.kind)}"/>`;
+    h+=`<rect x="${x0}" y="${y0}" width="${x1-x0}" height="${E.south.row_width_m*s}" fill="${band(E.south.kind)}"/>`;
+    h+=`<rect x="${x1}" y="${y1}" width="${E.east.row_width_m*s}" height="${y0-y1}" fill="${band(E.east.kind)}"/>`;
+    h+=`<rect x="${x0-E.west.row_width_m*s}" y="${y1}" width="${E.west.row_width_m*s}" height="${y0-y1}" fill="${band(E.west.kind)}"/>`;
+    // ROW centrelines
+    const cl=(kind)=>kind==="street"?"#c8352b":kind==="lane"?"#b26b00":null;
+    [["south",[0,-E.south.row_width_m/2],[L.width_m,-E.south.row_width_m/2]],["north",[0,L.depth_m+E.north.row_width_m/2],[L.width_m,L.depth_m+E.north.row_width_m/2]],["east",[L.width_m+E.east.row_width_m/2,0],[L.width_m+E.east.row_width_m/2,L.depth_m]],["west",[-E.west.row_width_m/2,0],[-E.west.row_width_m/2,L.depth_m]]].forEach(([k,a,b])=>{ const c=cl(E[k].kind); if(c&&E[k].row_width_m){ const [ax,ay]=toSvg(...a),[bx,by]=toSvg(...b); h+=`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${c}" stroke-width=".3" stroke-dasharray="2 1" opacity=".7"/>`; } });
+  }
+  // context buildings
+  (spec.context||[]).forEach((c,i)=>{ h+=`<polygon class="ctx ${i===ctxSel?"sel":""}" data-c="${i}" points="${ptsAttr(c.footprint)}"/>`; const [bx0,by0,bx1,by1]=bbox(c.footprint); const [cx,cy]=toSvg((bx0+bx1)/2,(by0+by1)/2); h+=`<text class="ctxLbl" x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle">${esc(c.name)} · ${fmt(c.height_m)} m</text>`;
+    if(i===ctxSel) c.footprint.forEach((p,k)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx" data-c="${i}" data-v="${k}" cx="${px}" cy="${py}" r="1.1"/>`; }); });
+  // lot
+  if(L.polygon){
+    const kinds=L.edge_kinds||[];
+    L.polygon.forEach((p,i)=>{ const q=L.polygon[(i+1)%L.polygon.length]; const k=kinds[i]||{kind:"neighbour",row_width_m:0}; const [ax,ay]=toSvg(p[0],p[1]),[bx,by]=toSvg(q[0],q[1]);
+      h+=`<line class="lotSeg ${k.kind} lotEdge" data-seg="${i}" x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}"/>`;
+      const mx=(ax+bx)/2,my=(ay+by)/2, ang=Math.atan2(by-ay,bx-ax)*180/Math.PI; const rot=(ang>90||ang<-90)?ang+180:ang;
+      h+=`<g class="lotEdge" data-seg="${i}" transform="translate(${mx},${my}) rotate(${rot})"><rect x="-9" y="-2.4" width="18" height="3.8" stroke-width=".2"/><text text-anchor="middle" dominant-baseline="middle">${k.kind}${k.kind!=="neighbour"?` ${k.row_width_m} m`:""}</text></g>`; });
+  } else {
+    h+=`<rect x="${x0}" y="${y1}" width="${x1-x0}" height="${y0-y1}" fill="none" stroke="var(--ink)" stroke-width=".5" stroke-dasharray="1.6 .8"/>`;
+    if(L.setbacks){ const sb=L.setbacks; const [sx0,sy0]=toSvg(sb.side,sb.front),[sx1,sy1]=toSvg(L.width_m-sb.side,L.depth_m-sb.rear); h+=`<rect x="${sx0}" y="${sy1}" width="${sx1-sx0}" height="${sy0-sy1}" fill="none" stroke="#b26b00" stroke-width=".3" stroke-dasharray=".8 .8" opacity=".8"/>`; }
+    const lbl=(side,x,y,rot)=>`<g class="lotEdge" data-side="${side}" transform="translate(${x},${y}) rotate(${rot})"><rect x="-11" y="-2.6" width="22" height="4.2" stroke-width=".2"/><text text-anchor="middle" dominant-baseline="middle">${side} · ${E[side].kind}${E[side].kind!=="neighbour"?` ${E[side].row_width_m} m`:""}</text></g>`;
+    h+=lbl("south",(x0+x1)/2,y0+3.5,0)+lbl("north",(x0+x1)/2,y1-3.5,0)+lbl("east",x1+3.5,(y0+y1)/2,-90)+lbl("west",x0-3.5,(y0+y1)/2,-90);
+  }
+  // blocks: ghosts of every distinct storey outline, then the edit target
+  spec.blocks.forEach((b,bi)=>{
+    const distinct=[]; b.storeys.forEach(st=>{ const k=JSON.stringify(st.footprint||null); if(st.footprint&&!distinct.includes(k)) distinct.push(k); });
+    distinct.forEach(k=>{ h+=`<polygon class="blk ghost" points="${ptsAttr(JSON.parse(k))}"/>`; });
+    const tgt = bi===sel ? editTarget() : {pts:b.footprint, holes:b.holes};
+    h+=`<polygon class="blk ${bi===sel?"sel":""}" data-b="${bi}" points="${ptsAttr(tgt.pts)}"/>`;
+    (tgt.holes||[]).forEach((hole,hi)=>{ h+=`<polygon class="hole" data-b="${bi}" data-h="${hi}" points="${ptsAttr(hole)}"/>`; if(bi===sel) hole.forEach((p,k)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx h" data-b="${bi}" data-h="${hi}" data-v="${k}" cx="${px}" cy="${py}" r="1.0"/>`; }); });
+    tgt.pts.forEach((p,i)=>{ const q=tgt.pts[(i+1)%tgt.pts.length]; const [mx,my]=toSvg((p[0]+q[0])/2,(p[1]+q[1])/2); const len=Math.hypot(q[0]-p[0],q[1]-p[1]).toFixed(1);
+      h+=`<text class="edgeLbl" x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="middle">${len}</text>`;
+      if(bi===sel){ const [ax,ay]=toSvg(p[0],p[1]),[bx,by]=toSvg(q[0],q[1]); h+=`<line class="edgeHit" data-b="${bi}" data-e="${i}" x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="transparent" stroke-width="2.5" style="cursor:copy"/>`; } });
+    if(bi===sel) tgt.pts.forEach((p,i)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx" data-b="${bi}" data-v="${i}" cx="${px}" cy="${py}" r="1.3"/>`; });
+    const [bx0,by0,bx1,by1]=bbox(tgt.pts); const [cx,cy]=toSvg((bx0+bx1)/2,(by0+by1)/2);
+    h+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" style="font:600 3px 'IBM Plex Sans Condensed',sans-serif;fill:var(--ink);pointer-events:none">${esc(b.name)} · ${b.storeys.length} st${bi===sel&&editStorey!=null?` · editing L${editStorey}`:""}</text>`;
+  });
+  h+=`<text x="1" y="99" style="font:2.4px 'IBM Plex Mono',monospace;fill:var(--mut)">N ↑  grid 5 m</text>`;
+  svg.innerHTML=h;
+}
+svg.addEventListener("pointerdown",ev=>{
+  const t=ev.target; const [x,y]=fromSvg(...clientToSvg(ev));
+  if(t.classList.contains("vtx")&&t.dataset.c!==undefined){ ctxSel=+t.dataset.c; drag={kind:"cvtx",c:+t.dataset.c,v:+t.dataset.v}; svg.setPointerCapture(ev.pointerId); }
+  else if(t.classList.contains("vtx")&&t.dataset.h!==undefined){ const tgt=editTarget(); const hole=tgt.holes[+t.dataset.h]; if(ev.altKey){ if(hole.length>3){ hole.splice(+t.dataset.v,1); changed(); } return; } drag={kind:"hvtx",h:+t.dataset.h,v:+t.dataset.v}; svg.setPointerCapture(ev.pointerId); }
+  else if(t.classList.contains("vtx")){ const b=+t.dataset.b, v=+t.dataset.v; sel=b; const tgt=editTarget(); if(ev.altKey){ if(tgt.pts.length>3){ tgt.pts.splice(v,1); changed(); } return; } drag={kind:"vtx",v}; svg.setPointerCapture(ev.pointerId); }
+  else if(t.classList.contains("hole")){ sel=+t.dataset.b; drag={kind:"hmove",h:+t.dataset.h,last:[x,y]}; svg.setPointerCapture(ev.pointerId); }
+  else if(t.classList.contains("ctx")){ ctxSel=+t.dataset.c; drag={kind:"cmove",c:ctxSel,last:[x,y]}; svg.setPointerCapture(ev.pointerId); drawPlan(); drawCtxPanel(); }
+  else if(t.classList.contains("blk")){ if(sel!==+t.dataset.b){ sel=+t.dataset.b; editStorey=null; } ctxSel=null; drag={kind:"move",last:[x,y]}; svg.setPointerCapture(ev.pointerId); drawPlan(); drawBlockPanel(); }
+  else if(t.closest(".lotEdge")&&t.closest(".lotEdge").dataset.seg!==undefined){ const i=+t.closest(".lotEdge").dataset.seg; spec.lot.edge_kinds=spec.lot.edge_kinds||spec.lot.polygon.map(()=>({kind:"neighbour",row_width_m:0})); const e=spec.lot.edge_kinds[i]; e.kind=e.kind==="street"?"lane":e.kind==="lane"?"neighbour":"street"; e.row_width_m=e.kind==="street"?20:e.kind==="lane"?6:0; drawLotFields(); changed(); }
+  else if(t.closest(".lotEdge")){ const side=t.closest(".lotEdge").dataset.side; const e=spec.lot.edges[side]; e.kind = e.kind==="street"?"lane":e.kind==="lane"?"neighbour":"street"; if(e.kind==="street"&&!e.row_width_m) e.row_width_m=20; if(e.kind==="lane") e.row_width_m=6; if(e.kind==="neighbour") e.row_width_m=0; drawLotFields(); changed(); }
+  else { ctxSel=null; drawPlan(); }
+});
+svg.addEventListener("pointermove",ev=>{ if(!drag) return; const [x,y]=fromSvg(...clientToSvg(ev)); const L=spec.lot; const tgt=editTarget();
+  const inLot=(p)=>[snap(clamp(p[0],0,L.width_m)),snap(clamp(p[1],0,L.depth_m))];
+  if(drag.kind==="vtx"){ tgt.pts[drag.v]=L.polygon?[snap(x),snap(y)]:inLot([x,y]); }
+  else if(drag.kind==="hvtx"){ tgt.holes[drag.h][drag.v]=[snap(x),snap(y)]; }
+  else if(drag.kind==="cvtx"){ spec.context[drag.c].footprint[drag.v]=[snap(x),snap(y)]; }
+  else if(drag.kind==="move"||drag.kind==="hmove"||drag.kind==="cmove"){ const dx=x-drag.last[0], dy=y-drag.last[1]; const fp=drag.kind==="move"?tgt.pts:drag.kind==="hmove"?tgt.holes[drag.h]:spec.context[drag.c].footprint;
+    let ddx=dx, ddy=dy; if(drag.kind==="move"&&!L.polygon){ const xs=fp.map(p=>p[0]), ys=fp.map(p=>p[1]); ddx=clamp(dx,-Math.min(...xs),L.width_m-Math.max(...xs)); ddy=clamp(dy,-Math.min(...ys),L.depth_m-Math.max(...ys)); }
+    fp.forEach(p=>{p[0]=snap(p[0]+ddx); p[1]=snap(p[1]+ddy);}); if(drag.kind==="move"&&tgt.owner===spec.blocks[sel]) (tgt.holes||[]).forEach(hh=>hh.forEach(p=>{p[0]=snap(p[0]+ddx); p[1]=snap(p[1]+ddy);})); drag.last=[x,y]; }
+  drawPlan(); scheduleAnalyze(); });
+svg.addEventListener("pointerup",()=>{ if(drag){ drag=null; changed(); } });
+svg.addEventListener("dblclick",ev=>{ const t=ev.target; if(t.classList.contains("edgeHit")){ const e=+t.dataset.e; const fp=editTarget().pts; const p=fp[e],q=fp[(e+1)%fp.length]; fp.splice(e+1,0,[snap((p[0]+q[0])/2),snap((p[1]+q[1])/2)]); changed(); } });
+
+// ------------------------------------------------------------------ lot & block panels
+function drawLotFields(){
+  $("#lotW").value=spec.lot.width_m; $("#lotD").value=spec.lot.depth_m; $("#grade").value=spec.lot.grade_m; $("#spr").value=spec.sprinklered?"1":"0"; $("#projName").value=spec.project_name;
+  if(spec.lot.polygon){ const K=spec.lot.edge_kinds||[]; $("#edgeFields").innerHTML=`<div class="hint">${esc(spec.lot.source||"polygon lot")}${spec.lot.zoning?` · zoning ${esc(spec.lot.zoning)}`:""}${spec.lot.address?` · ${esc(spec.lot.address)}`:""}</div>`+spec.lot.polygon.map((p,i)=>{const e=K[i]||{kind:"neighbour",row_width_m:0}; return `<div class="field"><label>edge ${i}</label><span><select data-seg="${i}" class="segKind"><option ${e.kind==="street"?"selected":""}>street</option><option ${e.kind==="lane"?"selected":""}>lane</option><option ${e.kind==="neighbour"?"selected":""}>neighbour</option></select> <input class="segW" data-seg="${i}" type="number" step="0.5" min="0" value="${e.row_width_m}" style="width:64px" ${e.kind==="neighbour"?"disabled":""}></span></div>`;}).join("");
+    document.querySelectorAll(".segKind").forEach(el=>el.onchange=()=>{spec.lot.edge_kinds=spec.lot.edge_kinds||spec.lot.polygon.map(()=>({kind:"neighbour",row_width_m:0})); const e=spec.lot.edge_kinds[+el.dataset.seg]; e.kind=el.value; e.row_width_m=e.kind==="street"?(e.row_width_m||20):e.kind==="lane"?(e.row_width_m||6):0; drawLotFields(); changed();});
+    document.querySelectorAll(".segW").forEach(el=>el.onchange=()=>{spec.lot.edge_kinds[+el.dataset.seg].row_width_m=+el.value; changed();});
+    $("#lotW").disabled=$("#lotD").disabled=true; return; }
+  $("#lotW").disabled=$("#lotD").disabled=false;
+  const sb=spec.lot.setbacks;
+  $("#edgeFields").innerHTML=["south","north","east","west"].map(s=>{const e=spec.lot.edges[s]; return `<div class="field"><label>${s} edge</label><span><select data-side="${s}" class="edgeKind"><option ${e.kind==="street"?"selected":""}>street</option><option ${e.kind==="lane"?"selected":""}>lane</option><option ${e.kind==="neighbour"?"selected":""}>neighbour</option></select> <input class="edgeW" data-side="${s}" type="number" step="0.5" min="0" value="${e.row_width_m}" title="right-of-way width (m)" style="width:64px" ${e.kind==="neighbour"?"disabled":""}></span></div>`}).join("")
+    +`<div class="field"><label>Setbacks front / side / rear (m)</label><span><input class="sbk" data-k="front" type="number" step="0.1" min="0" value="${sb?sb.front:""}" style="width:38px" placeholder="—"> <input class="sbk" data-k="side" type="number" step="0.1" min="0" value="${sb?sb.side:""}" style="width:38px" placeholder="—"> <input class="sbk" data-k="rear" type="number" step="0.1" min="0" value="${sb?sb.rear:""}" style="width:38px" placeholder="—"></span></div>`;
+  document.querySelectorAll(".edgeKind").forEach(el=>el.onchange=()=>{const e=spec.lot.edges[el.dataset.side]; e.kind=el.value; if(e.kind==="neighbour") e.row_width_m=0; else if(!e.row_width_m) e.row_width_m=e.kind==="lane"?6:20; drawLotFields(); changed();});
+  document.querySelectorAll(".edgeW").forEach(el=>el.onchange=()=>{spec.lot.edges[el.dataset.side].row_width_m=+el.value; changed();});
+  document.querySelectorAll(".sbk").forEach(el=>el.onchange=()=>{ spec.lot.setbacks=spec.lot.setbacks||{front:0,side:0,rear:0}; spec.lot.setbacks[el.dataset.k]=+el.value||0; changed(); });
+}
+["lotW","lotD","grade","spr","projName"].forEach(id=>$("#"+id).addEventListener("change",()=>{ spec.lot.width_m=+$("#lotW").value; spec.lot.depth_m=+$("#lotD").value; spec.lot.grade_m=+$("#grade").value; spec.sprinklered=$("#spr").value==="1"; spec.project_name=$("#projName").value; changed(); }));
+
+function drawBlockPanel(){
+  $("#blockTabs").innerHTML=spec.blocks.map((b,i)=>`<span class="chip ${i===sel?"":"mut"}" data-i="${i}" style="cursor:pointer">${esc(b.name)}</span>`).join("");
+  document.querySelectorAll("#blockTabs .chip").forEach(c=>c.onclick=()=>{sel=+c.dataset.i; editStorey=null; drawPlan(); drawBlockPanel();});
+  const b=spec.blocks[sel]; if(!b){ $("#blockPanel").innerHTML=""; return; }
+  const tgt=editTarget(); const area=polyArea(tgt.pts)-(tgt.holes||[]).reduce((a,h)=>a+polyArea(h),0);
+  const st=editStorey!=null?b.storeys[editStorey-1]:null;
+  $("#blockPanel").innerHTML=`
+    <div class="field"><label>Name</label><input id="bName" value="${esc(b.name)}" style="text-align:left"></div>
+    <div class="field"><label>Outline being edited</label><span class="mono">${tgt.label}${tgt.holes&&tgt.holes.length?` · ${tgt.holes.length} court`:""} · ${area.toFixed(0)} m²</span></div>
+    ${st?`<div class="chips">${st.footprint?`<button class="sm" id="bResetFp">Use block outline</button><button class="sm" id="bInset">Inset 1.5 m</button>`:`<button class="sm pri" id="bOwnFp">Give L${editStorey} its own outline</button>`}<button class="sm" id="bStoreyHole">${st.holes!=null?"Courtyards: own":"Courtyards: block's"}</button><button class="sm ghost" id="bBackBlock">← block</button></div>`:
+      `<div class="chips"><button class="sm" id="bAddHole">+ courtyard</button>${b.holes.length?`<button class="sm" id="bDelHole">− courtyard</button>`:""}</div>`}
+    <div class="field"><label>First floor above grade (m)</label><input id="bFF" type="number" step="0.05" value="${b.first_floor_above_grade_m}"></div>
+    <div class="field"><label>Glazing on all faces (%)</label><input id="bGl" type="number" step="5" min="0" max="100" value="${b.default_glazing_pct}"></div>
+    <div class="field"><label>Governing article (override)</label><input id="bArt" placeholder="auto" value="${esc(spec.chosen_articles[b.name]||"")}" style="text-align:left"></div>
+    <div class="sub-h">Storeys (bottom → top)<span class="sp"></span><button class="sm" id="bAddSt">+ storey</button></div>
+    <div id="storeys">${b.storeys.map((s,i)=>`<div class="storey ${editStorey===i+1?"edit":""} ${s.footprint?"own":""}"><span class="n" data-i="${i}" title="click to edit this storey's own outline">L${i+1}</span><select data-i="${i}" class="stOcc">${OCC.map(o=>`<option ${o===s.occupancy?"selected":""}>${o}</option>`).join("")}</select><input data-i="${i}" class="stUse" value="${esc(s.use||"")}" placeholder="use"><input data-i="${i}" class="stH" type="number" step="0.1" min="2.2" value="${s.floor_to_floor_m}" title="floor-to-floor (m)">${s.occupancy==="C"?`<input data-i="${i}" class="stBeds" type="number" min="0" step="1" value="${s.sleeping_rooms??""}" placeholder="beds" title="bedrooms on this storey (2 persons each, 3.1.17.1.(1)(b)); blank = estimate 1 per 35 m²"><input data-i="${i}" class="stUnits" type="number" min="0" step="1" value="${s.dwelling_units??""}" placeholder="units" title="dwelling units (1 WC each, 3.7.2.2.(9))">`:`<input data-i="${i}" class="stDed" type="number" min="0" max="100" step="5" value="${s.net_deduction_pct||""}" placeholder="ded %" title="circulation / duplicate-use deduction for the designed occupant load"><span></span>`}<button class="x" data-i="${i}" title="remove">×</button></div>`).join("")}</div>
+    <div class="hint">Columns: occupancy · use · floor-to-floor (m) · <b>beds / units</b> (Group C) or <b>deduction %</b>. ◧ marks a storey with its own outline.</div>
+    <div class="sub-h">Roof</div>
+    <div class="field"><label>Parapet (m)</label><input id="rParapet" type="number" step="0.1" min="0" value="${b.roof.parapet_m}"></div>
+    <div class="field"><label>Rooftop enclosure</label><select id="rEnc"><option value="" ${!b.roof.enclosure?"selected":""}>none</option><option value="service" ${b.roof.enclosure&&/elevator|machine|stair|mechanical|service/i.test(b.roof.enclosure.use)?"selected":""}>elevator / stair penthouse (not a storey)</option><option value="amenity" ${b.roof.enclosure&&!/elevator|machine|stair|mechanical|service/i.test(b.roof.enclosure.use)?"selected":""}>amenity room (counts as a storey)</option></select></div>
+    ${b.roof.enclosure?`<div class="field"><label>Enclosure height (m) · use</label><span><input id="rEncH" type="number" step="0.1" min="2.2" value="${b.roof.enclosure.height_m}" style="width:56px"> <input id="rEncUse" value="${esc(b.roof.enclosure.use)}" style="width:150px;text-align:left"></span></div>`:""}
+    <div class="field"><label>Balconies (edge · depth m)</label><span>${b.roof.balconies.map((bl,i)=>`<span class="chip">e${bl.edge} · ${bl.depth_m} m <a href="#" data-i="${i}" class="delBal" style="color:inherit;text-decoration:none">×</a></span> `).join("")}<button class="sm" id="rAddBal">+</button></span></div>
+    <div class="hint">Per-edge glazing: <span id="edgeGl"></span></div>`;
+  $("#bName").onchange=e=>{ const old=b.name; b.name=e.target.value||old; if(spec.chosen_articles[old]){spec.chosen_articles[b.name]=spec.chosen_articles[old]; delete spec.chosen_articles[old];} changed(); };
+  $("#bFF").onchange=e=>{b.first_floor_above_grade_m=+e.target.value; changed();};
+  $("#bGl").onchange=e=>{b.default_glazing_pct=+e.target.value; b.glazing_pct_by_edge={}; changed();};
+  $("#bArt").onchange=e=>{ if(e.target.value.trim()) spec.chosen_articles[b.name]=e.target.value.trim(); else delete spec.chosen_articles[b.name]; changed(); };
+  $("#bAddSt").onclick=()=>{ const last=b.storeys[b.storeys.length-1]; b.storeys.push(JSON.parse(JSON.stringify(last))); changed(); };
+  document.querySelectorAll(".storey .n").forEach(el=>el.onclick=()=>{ const i=+el.dataset.i+1; editStorey=editStorey===i?null:i; drawPlan(); drawBlockPanel(); });
+  document.querySelectorAll(".stOcc").forEach(el=>el.onchange=()=>{b.storeys[+el.dataset.i].occupancy=el.value; changed();});
+  document.querySelectorAll(".stUse").forEach(el=>el.onchange=()=>{b.storeys[+el.dataset.i].use=el.value; changed();});
+  document.querySelectorAll(".stH").forEach(el=>el.onchange=()=>{b.storeys[+el.dataset.i].floor_to_floor_m=+el.value; changed();});
+  document.querySelectorAll(".stBeds").forEach(el=>el.onchange=()=>{b.storeys[+el.dataset.i].sleeping_rooms=el.value===""?null:+el.value; changed();});
+  document.querySelectorAll(".stUnits").forEach(el=>el.onchange=()=>{b.storeys[+el.dataset.i].dwelling_units=el.value===""?null:+el.value; changed();});
+  document.querySelectorAll(".stDed").forEach(el=>el.onchange=()=>{b.storeys[+el.dataset.i].net_deduction_pct=+el.value||0; changed();});
+  document.querySelectorAll(".storey .x").forEach(el=>el.onclick=()=>{ if(b.storeys.length>1){ b.storeys.splice(+el.dataset.i,1); if(editStorey>b.storeys.length) editStorey=null; changed(); } });
+  if(st){ const own=$("#bOwnFp"); if(own) own.onclick=()=>{ st.footprint=JSON.parse(JSON.stringify(b.footprint)); changed(); };
+    const rs=$("#bResetFp"); if(rs) rs.onclick=()=>{ st.footprint=null; changed(); };
+    const ins=$("#bInset"); if(ins) ins.onclick=()=>{ st.footprint=insetPoly(st.footprint,1.5); changed(); };
+    $("#bStoreyHole").onclick=()=>{ st.holes=st.holes!=null?null:JSON.parse(JSON.stringify(b.holes)); changed(); };
+    $("#bBackBlock").onclick=()=>{ editStorey=null; drawPlan(); drawBlockPanel(); }; }
+  else { $("#bAddHole").onclick=()=>{ const [x0,y0,x1,y1]=bbox(b.footprint); const w=(x1-x0)/3, d=(y1-y0)/3; const cx=(x0+x1)/2, cy=(y0+y1)/2; b.holes.push([[snap(cx-w/2),snap(cy-d/2)],[snap(cx+w/2),snap(cy-d/2)],[snap(cx+w/2),snap(cy+d/2)],[snap(cx-w/2),snap(cy+d/2)]]); changed(); };
+    const dh=$("#bDelHole"); if(dh) dh.onclick=()=>{ b.holes.pop(); changed(); }; }
+  $("#rParapet").onchange=e=>{ b.roof.parapet_m=+e.target.value; changed(); };
+  $("#rEnc").onchange=e=>{ const v=e.target.value; if(!v) b.roof.enclosure=null; else { const top=b.storeys[b.storeys.length-1].footprint||b.footprint; const [x0,y0,x1,y1]=bbox(top); const cx=(x0+x1)/2, cy=(y0+y1)/2, hw=Math.min(4,(x1-x0)/4), hd=Math.min(4,(y1-y0)/4);
+      b.roof.enclosure={footprint:[[snap(cx-hw),snap(cy-hd)],[snap(cx+hw),snap(cy-hd)],[snap(cx+hw),snap(cy+hd)],[snap(cx-hw),snap(cy+hd)]], height_m:v==="amenity"?3.2:3.0, use:v==="amenity"?"rooftop amenity lounge":"elevator machine room, stair", occupancy:"C"}; } changed(); };
+  const eh=$("#rEncH"); if(eh){ eh.onchange=e=>{ b.roof.enclosure.height_m=+e.target.value; changed(); }; $("#rEncUse").onchange=e=>{ b.roof.enclosure.use=e.target.value; changed(); }; }
+  $("#rAddBal").onclick=()=>{ b.roof.balconies.push({edge:0, depth_m:1.5, storeys:null}); changed(); };
+  document.querySelectorAll(".delBal").forEach(a=>a.onclick=ev=>{ ev.preventDefault(); b.roof.balconies.splice(+a.dataset.i,1); changed(); });
+  $("#edgeGl").innerHTML=b.footprint.map((p,i)=>`e${i}: <input type="number" class="eg" data-e="${i}" style="width:46px;font:inherit;padding:1px 3px;background:var(--sheet);color:var(--ink);border:1px solid var(--rule)" value="${b.glazing_pct_by_edge[i]??""}" placeholder="${b.default_glazing_pct}"> `).join("");
+  document.querySelectorAll(".eg").forEach(el=>el.onchange=()=>{ if(el.value==="") delete b.glazing_pct_by_edge[el.dataset.e]; else b.glazing_pct_by_edge[el.dataset.e]=+el.value; changed(); });
+}
+function drawCtxPanel(){
+  const C=spec.context||[];
+  $("#ctxPanel").innerHTML=C.length?C.map((c,i)=>`<div class="field" style="grid-template-columns:1fr auto auto"><input class="cName" data-i="${i}" value="${esc(c.name)}" style="text-align:left;width:auto;${i===ctxSel?"border-color:var(--blue)":""}"><input class="cH" data-i="${i}" type="number" step="0.5" min="1" value="${c.height_m}" style="width:64px" title="height (m)"><button class="sm ghost cDel" data-i="${i}">×</button></div>`).join("")+`<div class="hint">Neighbours are context for the 3D view and the Rhino file only — limiting distance is to the property line.</div>`:`<div class="hint">No neighbouring buildings drawn. They cast shadows in 3D and export to the Rhino <span class="mono">Context</span> layer.</div>`;
+  document.querySelectorAll(".cName").forEach(el=>{ el.onchange=()=>{ C[+el.dataset.i].name=el.value; changed(); }; el.onfocus=()=>{ ctxSel=+el.dataset.i; drawPlan(); }; });
+  document.querySelectorAll(".cH").forEach(el=>el.onchange=()=>{ C[+el.dataset.i].height_m=+el.value; changed(); });
+  document.querySelectorAll(".cDel").forEach(el=>el.onclick=()=>{ C.splice(+el.dataset.i,1); ctxSel=null; changed(); });
+}
+$("#btnAddCtx").onclick=()=>{ const L=spec.lot; const W=L.polygon?bbox(L.polygon)[2]:L.width_m; spec.context.push({name:`neighbour ${spec.context.length+1}`, footprint:[[W+1,2],[W+11,2],[W+11,Math.min(22,L.depth_m*0.6)],[W+1,Math.min(22,L.depth_m*0.6)]], height_m:9.5}); ctxSel=spec.context.length-1; changed(); };
+$("#btnAddBlock").onclick=()=>{ const n=String.fromCharCode(65+spec.blocks.length); const w=Math.min(10,spec.lot.width_m*0.5), d=Math.min(10,spec.lot.depth_m*0.3); spec.blocks.push({name:n, footprint:[[0,0],[w,0],[w,d],[0,d]], holes:[], roof:{parapet_m:0.6,enclosure:null,balconies:[]}, first_floor_above_grade_m:0.1, default_glazing_pct:30, glazing_pct_by_edge:{}, storeys:[{occupancy:"C",use:"suites",floor_to_floor_m:3},{occupancy:"C",use:"suites",floor_to_floor_m:3}]}); sel=spec.blocks.length-1; editStorey=null; changed(); };
+$("#btnDelBlock").onclick=()=>{ if(spec.blocks.length>1){ spec.blocks.splice(sel,1); sel=0; editStorey=null; changed(); } };
+$("#btnNew").onclick=()=>{ spec=newSpec(); sel=0; editStorey=null; changed(true); };
+$("#btnExample").onclick=async()=>{ spec=normalize(await apiExample()); sel=0; editStorey=null; changed(true); };
+
+// ------------------------------------------------------------------ 3D (three.js): shadows, sun, context, compliance faces
+const canvas=$("#three"); let renderer=null, scene=null, sun=null, hemi=null;
+try{ renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true}); renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; scene=new THREE.Scene(); }catch(e){ console.warn("3D unavailable:",e); }
+const camera=new THREE.PerspectiveCamera(36,2,0.1,3000); let massGroup=new THREE.Group();
+if(scene){ hemi=new THREE.HemisphereLight(0xffffff,0x8892a0,.75); scene.add(hemi); sun=new THREE.DirectionalLight(0xfff4e0,1.1); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-0.0006; scene.add(sun); scene.add(sun.target); scene.add(massGroup); }
+let orbit={th:-0.9,ph:0.95,r:1,pan:[0,0]}; let od=null;
+canvas.addEventListener("contextmenu",e=>e.preventDefault());
+canvas.addEventListener("pointerdown",e=>{od={x:e.clientX,y:e.clientY,btn:e.button,shift:e.shiftKey}; canvas.setPointerCapture(e.pointerId);}); canvas.addEventListener("pointerup",()=>od=null);
+canvas.addEventListener("pointermove",e=>{ if(!od) return; const dx=e.clientX-od.x, dy=e.clientY-od.y; if(od.btn===2||od.shift){ const L=spec.lot; const k=Math.max(L.width_m,L.depth_m)*0.0025*orbit.r; orbit.pan[0]+= -dx*k*Math.sin(orbit.th)+dy*k*Math.cos(orbit.th); orbit.pan[1]+= dx*k*Math.cos(orbit.th)+dy*k*Math.sin(orbit.th); } else { orbit.th-=dx*0.008; orbit.ph=clamp(orbit.ph-dy*0.006,0.12,1.52); } od={...od,x:e.clientX,y:e.clientY}; render3d(); });
+canvas.addEventListener("wheel",e=>{ e.preventDefault(); orbit.r=clamp(orbit.r*(1+e.deltaY*0.001),0.25,4); render3d(); },{passive:false});
+canvas.addEventListener("dblclick",()=>{ orbit={th:-0.9,ph:0.95,r:1,pan:[0,0]}; render3d(); });
+["sunAz","sunAlt"].forEach(id=>$("#"+id).addEventListener("input",()=>{ $("#sunAzV").textContent=$("#sunAz").value+"°"; $("#sunAltV").textContent=$("#sunAlt").value+"°"; render3d(); }));
+$("#chkShadows").onchange=()=>{ if(renderer){ renderer.shadowMap.enabled=$("#chkShadows").checked; build3d(); } }; $("#chkFaces").onchange=()=>build3d();
+function shapeOf(pts,holes){ const sh=new THREE.Shape(pts.map(p=>new THREE.Vector2(p[0],p[1]))); (holes||[]).forEach(h=>{ const path=new THREE.Path(h.map(p=>new THREE.Vector2(p[0],p[1]))); sh.holes.push(path); }); return sh; }
+function build3d(){
+  if(!renderer) return; massGroup.clear(); const L=spec.lot; const dark=isDark();
+  const lotPts=L.polygon||[[0,0],[L.width_m,0],[L.width_m,L.depth_m],[0,L.depth_m]];
+  const [ex0,ey0,ex1,ey1]=planExtent(); const pad=Math.max(ex1-ex0,ey1-ey0)*0.6;
+  // ground
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(ex1-ex0+2*pad,ey1-ey0+2*pad),new THREE.MeshLambertMaterial({color:dark?0x1b2027:0xe6e4dc})); gnd.rotation.x=-Math.PI/2; gnd.position.set((ex0+ex1)/2,-0.02,-(ey0+ey1)/2); gnd.receiveShadow=true; massGroup.add(gnd);
+  // ROW bands
+  if(!L.polygon){ const E=L.edges; const bandMat=k=>new THREE.MeshLambertMaterial({color:k==="street"?(dark?0x3a2a2a:0xf1dcd9):(dark?0x3a3324:0xf0e5c8),transparent:true,opacity:.9});
+    const band=(x,z,w,d,k)=>{ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),bandMat(k)); m.rotation.x=-Math.PI/2; m.position.set(x,-0.01,z); m.receiveShadow=true; massGroup.add(m); };
+    if(E.south.kind!=="neighbour") band(L.width_m/2, E.south.row_width_m/2, L.width_m+2*L.width_m, E.south.row_width_m, E.south.kind);
+    if(E.north.kind!=="neighbour") band(L.width_m/2, -L.depth_m-E.north.row_width_m/2, L.width_m+2*L.width_m, E.north.row_width_m, E.north.kind);
+    if(E.east.kind!=="neighbour") band(L.width_m+E.east.row_width_m/2, -L.depth_m/2, E.east.row_width_m, L.depth_m+2*L.depth_m, E.east.kind);
+    if(E.west.kind!=="neighbour") band(-E.west.row_width_m/2, -L.depth_m/2, E.west.row_width_m, L.depth_m+2*L.depth_m, E.west.kind); }
+  // lot surface + property line
+  const lotGeo=new THREE.ShapeGeometry(shapeOf(lotPts)); lotGeo.rotateX(-Math.PI/2);
+  const lot=new THREE.Mesh(lotGeo,new THREE.MeshLambertMaterial({color:dark?0x262d2a:0xdfe3d3})); lot.position.y=0; lot.receiveShadow=true; massGroup.add(lot);
+  massGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(lotGeo),new THREE.LineBasicMaterial({color:dark?0xe6e8eb:0x1e2126})));
+  if(L.setbacks&&!L.polygon){ const sb=L.setbacks; const g=new THREE.EdgesGeometry(new THREE.ShapeGeometry(shapeOf([[sb.side,sb.front],[L.width_m-sb.side,sb.front],[L.width_m-sb.side,L.depth_m-sb.rear],[sb.side,L.depth_m-sb.rear]]))); g.rotateX(-Math.PI/2); const l=new THREE.LineSegments(g,new THREE.LineDashedMaterial({color:0xb26b00,dashSize:.6,gapSize:.4})); l.computeLineDistances(); l.position.y=0.02; massGroup.add(l); }
+  // context
+  (spec.context||[]).forEach(c=>{ const g=new THREE.ExtrudeGeometry(shapeOf(c.footprint),{depth:c.height_m,bevelEnabled:false}); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:dark?0x3a4048:0xbfc3c9})); m.castShadow=m.receiveShadow=true; massGroup.add(m); massGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:dark?0x6a717c:0x8a9098}))); });
+  // blocks
+  spec.blocks.forEach(b=>{ let z=b.first_floor_above_grade_m; let lastPts=b.footprint, lastHoles=b.holes;
+    b.storeys.forEach((s,i)=>{ const pts=s.footprint||b.footprint, holes=s.holes!=null?s.holes:b.holes; lastPts=pts; lastHoles=holes;
+      const g=new THREE.ExtrudeGeometry(shapeOf(pts,holes),{depth:s.floor_to_floor_m-0.06,bevelEnabled:false}); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:OCC_COLOR[s.occupancy]||0x999999})); m.position.y=z; m.castShadow=m.receiveShadow=true; massGroup.add(m);
+      const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:dark?0xffffff:0x1e2126,transparent:true,opacity:dark?.25:.35})); e.position.y=z; massGroup.add(e);
+      // balconies
+      (b.roof.balconies||[]).forEach(bl=>{ if(i===0&&!bl.storeys) return; if(bl.storeys&&!bl.storeys.includes(i+1)) return; const fp=b.footprint; const a=fp[bl.edge%fp.length], q=fp[(bl.edge+1)%fp.length]; if(!a||!q) return; const ux=q[0]-a[0], uy=q[1]-a[1]; const len=Math.hypot(ux,uy)||1; const nx=uy/len, ny=-ux/len; const ccw=polyArea(fp)>0&&(fp.reduce((acc,p,k)=>{const r=fp[(k+1)%fp.length]; return acc+p[0]*r[1]-r[0]*p[1];},0)>0); const sgn=ccw?1:-1;
+        const sh=shapeOf([[a[0]+ux*0.1,a[1]+uy*0.1],[q[0]-ux*0.1,q[1]-uy*0.1],[q[0]-ux*0.1+sgn*nx*bl.depth_m,q[1]-uy*0.1+sgn*ny*bl.depth_m],[a[0]+ux*0.1+sgn*nx*bl.depth_m,a[1]+uy*0.1+sgn*ny*bl.depth_m]]); const bg=new THREE.ExtrudeGeometry(sh,{depth:0.18,bevelEnabled:false}); bg.rotateX(-Math.PI/2); const bm=new THREE.Mesh(bg,new THREE.MeshLambertMaterial({color:dark?0x9aa3ad:0xf4f4f4})); bm.position.y=z; bm.castShadow=true; massGroup.add(bm); });
+      z+=s.floor_to_floor_m; });
+    // parapet: a thin wall along each outer edge (works for any outline)
+    if(b.roof.parapet_m>0){ const pts=lastPts; const sgn=(pts.reduce((acc,p,k)=>{const r=pts[(k+1)%pts.length]; return acc+p[0]*r[1]-r[0]*p[1];},0)>0)?1:-1;
+      pts.forEach((a,k)=>{ const q=pts[(k+1)%pts.length]; const ux=q[0]-a[0], uy=q[1]-a[1]; const len=Math.hypot(ux,uy)||1; const nx=-uy/len*sgn, ny=ux/len*sgn; const tth=0.2;
+        const sh=shapeOf([[a[0],a[1]],[q[0],q[1]],[q[0]+nx*tth,q[1]+ny*tth],[a[0]+nx*tth,a[1]+ny*tth]]); const g=new THREE.ExtrudeGeometry(sh,{depth:b.roof.parapet_m,bevelEnabled:false}); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:dark?0x7d8590:0xd8dbe0})); m.position.y=z-0.06; m.castShadow=true; massGroup.add(m); }); }
+    // enclosure
+    if(b.roof.enclosure){ const en=b.roof.enclosure; const g=new THREE.ExtrudeGeometry(shapeOf(en.footprint),{depth:en.height_m,bevelEnabled:false}); g.rotateX(-Math.PI/2); const svc=/elevator|machine|stair|mechanical|service/i.test(en.use); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:svc?(dark?0x5c6572:0xaab0b8):OCC_COLOR[en.occupancy]||0x2a78d6})); m.position.y=z; m.castShadow=true; massGroup.add(m); const el=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:dark?0xffffff:0x1e2126,transparent:true,opacity:.3})); el.position.y=z; massGroup.add(el); }
+  });
+  // compliance faces: red where openings exceed the permitted %, green-tinted where a wall FRR is required
+  if($("#chkFaces").checked&&results&&results.building){ for(const f of results.building.exterior_faces){ const r=results.faces[f.label]; if(!r) continue; const s=f.start, e=f.end; const sx=s.x??s[0], sy=s.y??s[1], ex=e.x??e[0], ey=e.y??e[1]; const g=spec.lot.grade_m;
+      for(const band of r.bands){ if(band.ok&&!band.frr_min) continue; const z0=band.z0-g, z1=band.z1-g; const len=Math.hypot(ex-sx,ey-sy); const geo=new THREE.PlaneGeometry(len,z1-z0); const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:band.ok?0xe0a437:0xf0453a,transparent:true,opacity:band.ok?.28:.55,side:THREE.DoubleSide,depthWrite:false})); const ang=Math.atan2(ey-sy,ex-sx); m.position.set((sx+ex)/2,(z0+z1)/2,-(sy+ey)/2); m.rotation.y=ang; const nx=(ey-sy)/len, ny=-(ex-sx)/len; m.position.x+=nx*0.06; m.position.z-=ny*0.06; massGroup.add(m); } } }
+  scene.background=new THREE.Color(dark?0x0f1318:0xeef0f3); if(hemi) hemi.groundColor=new THREE.Color(dark?0x1a1e25:0x8892a0);
+  render3d();
+}
+function render3d(){ if(!renderer) return; const L=spec.lot; const w=canvas.clientWidth,h=canvas.clientHeight; if(canvas.width!==w||canvas.height!==h){renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();}
+  const lotPts=L.polygon||[[0,0],[L.width_m,0],[L.width_m,L.depth_m],[0,L.depth_m]]; const [lx0,ly0,lx1,ly1]=bbox(lotPts); const span=Math.max(lx1-lx0,ly1-ly0); const R=span*1.6*orbit.r; const c=new THREE.Vector3((lx0+lx1)/2+orbit.pan[0],Math.min(10,span*0.12),-(ly0+ly1)/2+orbit.pan[1]);
+  camera.position.set(c.x+R*Math.sin(orbit.ph)*Math.cos(orbit.th), c.y+R*Math.cos(orbit.ph), c.z+R*Math.sin(orbit.ph)*Math.sin(orbit.th)); camera.lookAt(c);
+  if(sun){ const az=+$("#sunAz").value*Math.PI/180, alt=+$("#sunAlt").value*Math.PI/180; const D=span*2.5; sun.position.set(c.x+D*Math.cos(alt)*Math.sin(az), D*Math.sin(alt), c.z+D*Math.cos(alt)*Math.cos(az)); sun.target.position.copy(c); sun.shadow.camera.left=sun.shadow.camera.bottom=-span*1.2; sun.shadow.camera.right=sun.shadow.camera.top=span*1.2; sun.shadow.camera.near=1; sun.shadow.camera.far=D*3; sun.shadow.camera.updateProjectionMatrix(); sun.intensity=0.5+0.7*Math.sin(alt); }
+  renderer.render(scene,camera); }
+new ResizeObserver(render3d).observe(canvas);
+
+// ------------------------------------------------------------------ analyze (debounced) + results panel
+let timer=null;
+function changed(full,noHistory){ normalize(spec); if(!noHistory) pushHistory(); drawPlan(); if(full) drawLotFields(); drawBlockPanel(); drawCtxPanel(); build3d(); scheduleAnalyze(); }
+function scheduleAnalyze(){ clearTimeout(timer); $("#status").textContent="checking…"; $("#status").className="status busy"; timer=setTimeout(analyze,160); }
+// @@API-START  (the artifact build swaps these for the in-page engine)
+async function apiAnalyze(sp){ const r=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(sp)}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+async function apiExample(){ return (await fetch("/api/examples/demo")).json(); }
+const ENGINE_LABEL="VBBL 2025";
+// @@API-END
+async function analyze(){
+  try{ results=await apiAnalyze(spec); drawResults(); if($("#chkFaces").checked) build3d(); $("#status").textContent=`checked ${new Date().toLocaleTimeString()} · ${ENGINE_LABEL}`; $("#status").className="status";
+  }catch(e){ console.error(e); $("#status").textContent="error: "+String(e.message||e).slice(0,160); $("#status").className="status err"; }
+}
+function gauge(it){ const frac=Math.min(1,it.value/it.cap); const cls=it.headroom<0?"over":frac>0.85?"tight":""; return `<div class="gauge ${cls}"><div class="t"><span>${it.what}</span><span class="mono">${fmt(it.value)} / ${fmt(it.cap)} ${it.unit} · <b>${it.headroom<0?"over by "+fmt(-it.headroom):fmt(it.headroom)+" left"}</b></span></div><div class="bar"><i style="width:${frac*100}%"></i></div></div>`; }
+const wcText=w=>w.male_wc!==null&&w.male_wc!==undefined?`${w.group}: ${w.male_wc}M+${w.female_wc}F wc, ${w.lavatories.male+w.lavatories.female} lav`:(w.group==="C"?`C: 1 wc/unit${w.dwelling_units?` (${w.dwelling_units})`:""}`:"");
+function targetsHtml(blk){
+  const T=(results.targets||{})[blk]; if(!T) return "";
+  const rows=T.storeys.slice().reverse().map(s=>`<tr><td class="mono">${s.label}</td><td class="mono">${s.net}${s.gross!==s.net?` <span style="color:var(--mut)">(${s.gross})</span>`:""}</td><td class="mono">${s.exits}</td><td class="mono">${s.travel_m} m</td><td class="mono">${s.widths.stair_each_mm}</td><td>${s.washrooms.map(wcText).filter(Boolean).join(" · ")||"—"}</td></tr>`).join("");
+  const e=T.egress||{};
+  return `<div class="sub-h" style="font-size:12px;font-weight:500">Targets — occupant load, egress, washrooms (3.1.17 · 3.4 · 3.7.2)</div>
+    <table class="tg"><thead><tr><th>Storey</th><th title="designed load (gross in brackets)">Load</th><th>Exits</th><th title="travel distance limit 3.4.2.5">Travel ≤</th><th title="clear width per exit stair, mm (3.4.3.2)">Stair mm</th><th>Washrooms (3.7.2.2)</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="hint">Building: <b>${fmt(T.total.net)}</b> persons${T.total.gross!==T.total.net?` (gross ${fmt(T.total.gross)})`:""} · <b>${e.exits||"—"}</b> exit stairs sized for ${e.governing_storey||"—"} (${e.governing_load||0} p.) → <b>${e.stair_each_mm||"—"} mm</b> each · doors ${e.door_each_mm||"—"} mm${T.gender_neutral.wc?` · <b>${T.gender_neutral.wc}</b> gender-neutral wc (VBBL 3.7.2.9, non-residential load ${T.gender_neutral.non_residential_load})`:""}</div>`;
+}
+function drawResults(){
+  if(!results) return; let h="";
+  for(const [blk,s] of Object.entries(results.summary)){
+    const hr=results.headroom[blk]; const faces=Object.entries(results.faces).filter(([k,v])=>v.block===blk);
+    const worst=(v)=>v.bands.reduce((a,b)=> (b.permitted-b.actual)<(a.permitted-a.actual)?b:a);
+    h+=`<div class="card"><h3>${esc(blk)} <span class="art">${s.article||"— no article"}</span><span class="sp"></span><span class="chip ${s.article?"ok":"no"}">${s.article?"compliant path found":"no qualifying article"}</span></h3>
+      <div class="kv"><span class="k">Major occupancies</span><span>${(s.majors||[]).map(m=>`<span class="chip" style="background:${OCC_COLOR[m]}22;color:${OCC_COLOR[m]}">${m}</span>`).join(" ")}</span>
+        <span class="k">Height · area</span><span class="mono">${s.storeys} storeys · ${fmt(s.height)} m to top floor · ${fmt(s.area)} m²</span>
+        <span class="k">Construction</span><span>${s.construction||"—"}</span><span class="k">Floors</span><span>${s.floors||"—"}</span></div>
+      ${hr?`<div class="sub-h" style="font-size:12px;font-weight:500">Headroom under ${hr.article} — <span style="color:var(--ink2);font-weight:400">${hr.title}</span></div>${hr.items.map(gauge).join("")}
+      <div class="hint">One more storey → ${hr.if_one_more_storey?`<span class="mono">${hr.if_one_more_storey}</span>`:"<b>no qualifying article</b>"}. Qualifying now: ${hr.qualifying.map(q=>`<span class="mono">${q}</span>`).join(", ")}.</div>`:""}
+      <div class="sub-h" style="font-size:12px;font-weight:500">Exposing faces (3.2.3)</div>
+      ${faces.map(([k,v])=>{const w=worst(v); const ok=v.bands.every(b=>b.ok); return `<div class="face"><span class="nm">${esc(k.replace(blk+" · ",""))}</span><span class="mono">LD ${v.ld} m · <span class="chip ${ok?"ok":"no"}">${fmt(w.actual)}% / ${fmt(w.permitted)}% permitted</span></span><span class="req">${w.frr_min?`wall FRR ≥ ${w.frr_min} min · ${w.construction} · ${w.cladding} cladding`:"no exposing-face requirement"}</span></div>`;}).join("")}
+      ${targetsHtml(blk)}
+    </div>`;
+  }
+  const seps=results.determinations.filter(d=>d.key.includes(".sep."));
+  if(seps.length) h+=`<div class="card"><h3>Occupancy separations (3.1.3)</h3>${seps.map(d=>`<div class="face"><span class="nm">${esc(d.label)}</span><span class="mono">${esc(d.value)}</span></div>`).join("")}</div>`;
+  const flags=results.flags.filter(([b,f])=>!f.includes("Adjacency inferred")&&!f.includes("massing:"));
+  const notes=((results.building||{}).notes||[]).slice(1);
+  h+=`<div class="card"><h3>Flags <span class="sp"></span><span class="chip ${flags.length?"no":"ok"}">${flags.length}</span></h3>${flags.map(([b,f])=>`<div class="flag ${/confirm|Confirm/.test(f)?"info":""}"><span class="mono" style="color:var(--mut)">${esc(b)}</span> ${esc(f)}</div>`).join("")||"<div class='hint'>none</div>"}${notes.map(n=>`<div class="note">${esc(n)}</div>`).join("")}</div>`;
+  $("#results").innerHTML=h;
+}
+
+// ------------------------------------------------------------------ library
+// @@LIBRARY-START  (the artifact build replaces this section with the db-backed library)
+async function loadLib(){
+  const r=await fetch("/api/iterations"); const items=await r.json();
+  $("#libList").innerHTML=items.map(it=>`<div class="it ${compareSel.includes(it.id)?"cmp":""}" data-id="${it.id}">${it.has_thumb?`<img src="/api/iterations/${it.id}/thumb.png">`:"<div></div>"}<div><div class="nm">${esc(it.name)}</div><div class="sub">${esc(it.project)} · ${(it.saved||"").replace("T"," ")} · ${Object.entries(it.summary||{}).map(([b,s])=>`${b}: ${s.storeys} st, ${fmt(s.area)} m², ${s.article||"—"}`).join(" · ")} · ${it.flags} flags</div></div><div>${it.has_pdf?`<a href="/api/iterations/${it.id}/summary.pdf" target="_blank" class="chip">PDF</a>`:""} <button class="sm del" data-id="${it.id}" title="delete">×</button></div></div>`).join("")||"<div class='hint'>Nothing saved yet.</div>";
+  document.querySelectorAll(".lib .it").forEach(el=>el.onclick=async ev=>{ if(ev.target.closest("button,a")) return; const id=el.dataset.id;
+    if(ev.shiftKey){ compareSel=compareSel.includes(id)?compareSel.filter(x=>x!==id):[...compareSel,id].slice(-3); $("#btnCompare").disabled=compareSel.length<2; loadLib(); return; }
+    const d=await (await fetch("/api/iterations/"+id)).json(); spec=normalize(d.spec); sel=0; editStorey=null; changed(true); });
+  document.querySelectorAll(".lib .del").forEach(el=>el.onclick=async ev=>{ ev.stopPropagation(); if(confirm("Delete this saved iteration?")){ await fetch("/api/iterations/"+el.dataset.id,{method:"DELETE"}); compareSel=compareSel.filter(x=>x!==el.dataset.id); loadLib(); } });
+  $("#btnCompare").disabled=compareSel.length<2;
+}
+$("#btnSave").onclick=()=>{ $("#svName").value=""; $("#svNote").value=""; $("#dlgSave").showModal(); };
+$("#dlgSave").addEventListener("close",async()=>{ if($("#dlgSave").returnValue!=="ok") return; render3d();
+  let thumb=null; try{ if(renderer){ const c2=document.createElement("canvas"); c2.width=240; c2.height=150; c2.getContext("2d").drawImage(canvas,0,0,240,150); thumb=c2.toDataURL("image/png").split(",")[1]; } }catch(e){}
+  $("#status").textContent="saving…"; $("#status").className="status busy";
+  const r=await fetch("/api/iterations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({spec, name:$("#svName").value, note:$("#svNote").value, thumbnail_png_b64:thumb})});
+  $("#status").textContent=r.ok?"saved":"save failed"; $("#status").className="status"+(r.ok?"":" err"); loadLib(); });
+$("#btnCompare").onclick=async()=>{ const rows=await Promise.all(compareSel.map(id=>fetch("/api/iterations/"+id).then(r=>r.json())));
+  const blocks=[...new Set(rows.flatMap(r=>Object.keys(r.results.summary)))];
+  let h=`<table class="cmp"><tr><th>Iteration</th>${blocks.map(b=>`<th>${esc(b)}</th>`).join("")}<th>Flags</th></tr>`;
+  for(const r of rows){ h+=`<tr><td><b>${esc(r.record.name)}</b><br><span class="sub">${esc(r.record.note||"")}</span></td>${blocks.map(b=>{const s=r.results.summary[b]; if(!s) return "<td>—</td>"; const hr=(r.results.headroom[b]||{}).items||[]; const a=hr.find(i=>i.what==="building area"); const tg=((r.results.targets||{})[b]); return `<td class="mono">${s.storeys} st · ${fmt(s.area)} m²<br>${s.article||"—"}<br>${a?`${fmt(a.headroom)} m² headroom`:""}${tg?`<br>${fmt(tg.total.net)} p. · ${tg.egress?tg.egress.exits+" stairs @ "+tg.egress.stair_each_mm+" mm":""}`:""}</td>`;}).join("")}<td>${r.results.flags.length}</td></tr>`; }
+  $("#cmp").innerHTML=h+"</table>"; };
+// @@LIBRARY-END
+$("#btnSummary").onclick=()=>{ if(results) showSummary(spec, results, "current massing"); };
+
+// ------------------------------------------------------------------ Rhino link (local app only; removed from the artifact build)
+// @@RHINO-START
+const Rhino={path:null,mtime:null,timer:null};
+function rhSet(state,msg){ const el=$("#rhStatus"); el.innerHTML=`<span class="dot ${state}"></span>${esc(msg)}`; }
+$("#rhExport").onclick=async()=>{ const r=await fetch("/api/rhino/export",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({spec,path:$("#rhPath").value||null})}); if(!r.ok){ rhSet("err","export failed: "+(await r.text()).slice(0,120)); return; } const j=await r.json(); Rhino.path=j.path; Rhino.mtime=j.mtime; $("#rhPath").value=j.path; rhSet("on","exported "+new Date().toLocaleTimeString()); toast("site.3dm written — open it in Rhino"); };
+$("#rhDownload").onclick=()=>{ const p=$("#rhPath").value||Rhino.path; if(!p){ toast("export first"); return; } window.open("/api/rhino/file?path="+encodeURIComponent(p),"_blank"); };
+async function rhImport(){ const p=$("#rhPath").value||Rhino.path; if(!p){ toast("set a .3dm path first"); return; } rhSet("on","reading…"); const r=await fetch("/api/rhino/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({path:p})}); if(!r.ok){ rhSet("err","import failed: "+(await r.text()).slice(0,140)); return; } const j=await r.json(); Rhino.path=p; Rhino.mtime=j.mtime; spec=normalize(j.spec); sel=Math.min(sel,spec.blocks.length-1); editStorey=null; changed(true); $("#rhWarn").innerHTML=j.warnings.map(w=>`<div class="flag info">${esc(w)}</div>`).join(""); rhSet("on","updated from Rhino "+new Date().toLocaleTimeString()); toast("massing updated from Rhino"); }
+$("#rhImport").onclick=rhImport;
+$("#rhWatch").onchange=()=>{ clearInterval(Rhino.timer); if($("#rhWatch").checked){ const p=$("#rhPath").value||Rhino.path; if(!p){ $("#rhWatch").checked=false; toast("export first, then watch"); return; } Rhino.path=p; rhSet("on","watching "+p.split(/[\\/]/).pop()); Rhino.timer=setInterval(async()=>{ try{ const j=await (await fetch("/api/rhino/status?path="+encodeURIComponent(Rhino.path))).json(); if(j.exists&&Rhino.mtime!=null&&j.mtime>Rhino.mtime+0.001){ Rhino.mtime=j.mtime; await new Promise(r=>setTimeout(r,400)); await rhImport(); } else if(j.exists&&Rhino.mtime==null) Rhino.mtime=j.mtime; }catch(e){ rhSet("err","server unreachable"); } },1200); } else rhSet("","not watching"); };
+// @@RHINO-END
+
+// ------------------------------------------------------------------ in-page code compliance summary
+function showSummary(sp, r, name){
+  const cite=d=>d.clauses.map(c=>`<span class="cite">${esc(c.id)}${c.page?` p.${c.page}`:""}</span>`).join(" ");
+  const val=d=>Array.isArray(d.value)?d.value.join(", "):(d.value===null||d.value===undefined?"—":String(d.value)+(d.unit?" "+d.unit:""));
+  const row=d=>`<tr><td class="blk">${esc(d.block||"site")}</td><td>${esc(d.label)}${d.flags.length?" <sup class='fl'>⚠</sup>":""}</td><td class="val mono">${esc(val(d))}</td><td class="why">${esc(d.because)}</td><td class="ref">${cite(d)}</td></tr>`;
+  const sec=(n,t,ds,note)=>ds.length?`<section><h3><span class="n">${n}</span>${t}</h3>${note?`<div class="hint">${note}</div>`:""}<table class="sum"><thead><tr><th>Block</th><th>Item</th><th>Value</th><th>Basis</th><th>Clause</th></tr></thead><tbody>${ds.map(row).join("")}</tbody></table></section>`:"";
+  const ds=r.determinations; const k=x=>x.key.split(".")[1];
+  const flags=[...new Map(ds.flatMap(d=>d.flags.map(f=>[f,(d.block||"site")]))).entries()];
+  const notes=((r.building||{}).notes||[]);
+  const html=`<div class="sumhead"><div><h2>${esc(sp.project_name)} — Building Code Analysis <span class="mono" style="font-size:12px;color:var(--mut)">${esc(name)}</span></h2><div class="hint">${esc(ENGINE_LABEL)} · ${sp.sprinklered?"sprinklered throughout":"not sprinklered"} · generated ${new Date().toISOString().slice(0,10)} · DRAFT for a registered professional's review — not a compliance determination. Massing-stage inputs: glazing ratios assumed, one occupancy per storey.</div></div><div><button class="sm" onclick="window.print()">Print</button> <button class="sm" onclick="document.getElementById('dlgSum').close()">Close</button></div></div>
+    ${sec("1","Building classification — major occupancies",ds.filter(d=>d.key.endsWith("major_occupancies")))}
+    ${sec("2","Grade, first storey, building height and area",ds.filter(d=>["first_storey","basements","building_height_storeys","height_to_top_floor_m","building_area_m2"].includes(k(d))||d.key==="site.grade_m"))}
+    ${sec("3","Governing article, Subsection 3.2.2",ds.filter(d=>k(d)==="article_candidates"||k(d)==="article"))}
+    ${sec("4","Construction and fire-resistance ratings",ds.filter(d=>k(d)==="req"))}
+    ${sec("5","Fire separations between major occupancies (3.1.3)",ds.filter(d=>k(d)==="sep"))}
+    ${sec("6","Spatial separation — exposing faces (3.2.3)",ds.filter(d=>k(d)==="face"&&d.key.endsWith("summary")),"Per-band detail below.")}
+    ${sec("7","Occupant load (3.1.17, Table 3.1.17.1)",ds.filter(d=>d.key.endsWith("occupant_load")||d.key.endsWith("occupant_load_total")),"Designed (net) load; gross in the basis where deductions apply. Group C: 2 persons per bedroom — estimated from area when bedrooms are not entered.")}
+    ${sec("8","Egress targets — exits, travel distance, exit width (3.4.2, 3.4.3)",ds.filter(d=>d.key.split(".").pop()==="egress"),"Targets for the plan, not a check of it.")}
+    ${sec("9","Washroom fixture targets (3.7.2, incl. VBBL 3.7.2.9)",ds.filter(d=>["washrooms","gender_neutral_wc"].includes(d.key.split(".").pop())))}
+    ${sec("B","Spatial separation by storey band",ds.filter(d=>k(d)==="face"&&!d.key.endsWith("summary")))}
+    <section><h3><span class="n">⚠</span>Reviewer flags (${flags.length})</h3><ul class="fl">${flags.map(([f,b])=>`<li><span class="mono" style="color:var(--mut)">${esc(b)}</span> ${esc(f)}</li>`).join("")||"<li>none</li>"}</ul></section>
+    <section><h3><span class="n">·</span>Model notes</h3><ul class="fl">${notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul></section>
+    <section><h3><span class="n">·</span>Not covered by this draft</h3><ul class="fl"><li>Egress layout — exit locations, dead ends, access to exit (3.3, 3.4.2.3–.4); only count, travel limit and width targets are computed</li><li>Washroom accessibility layout (3.8.3) — fixture counts only</li><li>Fire alarm, standpipe, sprinkler design (3.2.4, 3.2.5); firefighting access (3.2.5.4–.5)</li><li>High building (3.2.6); interior finishes, fire blocks (3.1.5, 3.1.11–.12); mass-timber limits (3.1.6, 3.2.2.93)</li><li>Energy (Part 10) and accessibility (3.8)</li></ul></section>`;
+  $("#dlgSum .sumbody").innerHTML=html; $("#dlgSum").showModal();
+}
+// ------------------------------------------------------------------ boot
+normalize(spec); hist.last=JSON.stringify(spec); updateHistBtns();
+drawLotFields(); drawPlan(); drawBlockPanel(); drawCtxPanel(); build3d(); analyze(); loadLib();
+</script>
+<script src="/wizard.js"></script>
+</body></html>

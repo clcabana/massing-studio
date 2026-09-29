@@ -1,0 +1,8 @@
+fastapi>=0.110
+uvicorn>=0.27
+pydantic>=2.5
+plotly>=5.18
+pypdf>=4.0
+playwright>=1.40
+pytest>=7
+rhino3dm>=8.0
