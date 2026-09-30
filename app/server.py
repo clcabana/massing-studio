@@ -23,12 +23,12 @@ Iterations live on disk, one folder each, so a firm can keep them with the proje
 """
 from __future__ import annotations
 
-import argparse, base64, datetime, json, pathlib, re, shutil, sys
+import argparse, base64, datetime, json, pathlib, re, shutil, sys, time
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "data" / "projects")]
@@ -58,7 +58,12 @@ class SaveRequest(BaseModel):
 
 @app.post("/api/analyze")
 def analyze(spec: MassingSpec):
-    return analyze_massing(spec)
+    if not any(b.storeys for b in spec.blocks):
+        raise HTTPException(422, "nothing to analyse: the massing has no storeys (add a block, or check the Rhino file's Massing layers)")
+    try:
+        return analyze_massing(spec)
+    except (ValidationError, ValueError) as e:   # a spec the model can describe but the engine cannot build
+        raise HTTPException(422, f"could not analyse this massing: {e}")
 
 
 def _iter_dir(project: str) -> pathlib.Path:
@@ -227,10 +232,44 @@ def rhino_export(req: RhinoExport):
     return {"path": str(path), "mtime": path.stat().st_mtime}
 
 
+def _newer_copies(p: pathlib.Path) -> list[dict]:
+    """Same-named .3dm files in the user's Downloads folder that are newer than `p`.
+
+    The Download button hands the browser a copy; when the designer opens that copy in Rhino and saves,
+    the file the server wrote never changes. The UI follows the newest such copy instead."""
+    downloads = pathlib.Path.home() / "Downloads"
+    ref = p.stat().st_mtime if p.exists() else 0.0
+    out = []
+    if downloads.is_dir():
+        for q in downloads.glob(f"{p.stem}*.3dm"):
+            try:
+                st = q.stat()
+            except OSError:
+                continue
+            if q.resolve() != p.resolve() and st.st_mtime > ref + 0.001:
+                out.append({"path": str(q), "mtime": st.st_mtime, "size": st.st_size})
+    return sorted(out, key=lambda d: -d["mtime"])
+
+
+def _settled(p: pathlib.Path, wait: float = 0.3, tries: int = 10) -> bool:
+    """Rhino writes a .3dm in place over some hundreds of ms; wait until size and mtime stop changing."""
+    last = None
+    for _ in range(tries):
+        st = p.stat()
+        cur = (st.st_size, st.st_mtime)
+        if cur == last:
+            return True
+        last = cur
+        time.sleep(wait)
+    return False
+
+
 @app.get("/api/rhino/status")
 def rhino_status(path: str):
     p = _resolve_3dm(path)
-    return {"exists": p.exists(), "mtime": p.stat().st_mtime if p.exists() else None}
+    st = p.stat() if p.exists() else None
+    return {"exists": st is not None, "mtime": st.st_mtime if st else None, "size": st.st_size if st else None,
+            "newer_copies": _newer_copies(p)}
 
 
 @app.post("/api/rhino/import")
@@ -240,10 +279,19 @@ def rhino_import(req: RhinoPath):
     p = _resolve_3dm(req.path)
     if not p.exists():
         raise HTTPException(404, f"{p} not found")
-    try:
-        spec, warnings = rhino_io.import_3dm(p)
-    except Exception as e:                       # a half-written file mid-save, or foreign geometry
-        raise HTTPException(422, f"could not read {p.name}: {e}")
+    _settled(p)
+    err = "unknown error"
+    for attempt in range(3):                     # a half-written file mid-save reads as None or as an empty model
+        try:
+            spec, warnings = rhino_io.import_3dm(p)
+            if spec.blocks:
+                break
+            err = "no storey volumes found under a Massing::<Block> layer"
+        except Exception as e:                   # foreign geometry, or still being written
+            err = str(e)
+        time.sleep(0.4)
+    else:
+        raise HTTPException(422, f"could not read {p.name}: {err}")
     return {"spec": spec.model_dump(mode="json"), "warnings": warnings, "mtime": p.stat().st_mtime}
 
 

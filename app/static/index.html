@@ -24,7 +24,7 @@ main{display:grid;grid-template-columns:minmax(380px,1.15fr) 350px minmax(380px,
 .blk{fill:rgba(42,120,214,.16);stroke:var(--blue);stroke-width:1.2;cursor:move} .blk.sel{fill:rgba(42,120,214,.28);stroke-width:2} .blk.ghost{fill:none;stroke:var(--blue);stroke-width:.5;stroke-dasharray:1 .8;pointer-events:none;opacity:.7}
 .hole{fill:var(--sheet);stroke:var(--blue);stroke-width:1;stroke-dasharray:1.4 .7;cursor:move} .ctx{fill:rgba(128,128,128,.22);stroke:var(--mut);stroke-width:.7;cursor:move} .ctx.sel{stroke:var(--ink);stroke-width:1.2}
 .vtx{fill:var(--sheet);stroke:var(--blue);stroke-width:1.5;cursor:grab} .vtx:hover{fill:var(--blue)} .vtx.h{stroke-dasharray:.8 .5}
-.edgeLbl{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink2);pointer-events:none} .ctxLbl{font:2.2px "IBM Plex Sans",sans-serif;fill:var(--mut);pointer-events:none}
+.edgeLbl{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink2);pointer-events:none} .edgeH rect{fill:var(--sheet);stroke:var(--blue);stroke-width:.3} .edgeH text{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink)} .edgeH:hover rect{fill:var(--blue-soft);stroke-width:.5} .ctxLbl{font:2.2px "IBM Plex Sans",sans-serif;fill:var(--mut);pointer-events:none}
 .field{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;margin:4px 0} .field label{color:var(--ink2)} .field input,.field select{font:inherit;padding:3px 6px;border:1px solid var(--rule);border-radius:3px;width:120px;text-align:right;background:var(--sheet);color:var(--ink)}
 .field select{text-align:left}
 .storey{display:grid;grid-template-columns:22px 58px 1fr 52px 48px 48px 22px;gap:4px;align-items:center;margin:3px 0} .storey input,.storey select{font:inherit;padding:2px 4px;border:1px solid var(--rule);border-radius:3px;width:100%;background:var(--sheet);color:var(--ink)}
@@ -83,7 +83,7 @@ table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:
     <div class="pane">
       <h2>Plan <span class="sp"></span><span class="legend"><span><i style="background:#2a78d6"></i>C</span><span><i style="background:#eb6834"></i>A2</span><span><i style="background:#e87ba4"></i>E</span><span><i style="background:#eda100"></i>D</span><span><i style="background:#1baf7a"></i>F3</span></span></h2>
       <svg id="plan" viewBox="0 0 100 100"></svg>
-      <div class="hint">Drag a corner to reshape, drag a body to move, double-click an edge to add a corner, <kbd>Alt</kbd>-click a corner to remove it. Click a storey number in the Blocks panel to edit that storey's own outline. Click a lot edge label to cycle street / lane / neighbour. <kbd>⌘Z</kbd> undo.</div>
+      <div class="hint">Drag a corner to reshape, drag a wall's length tag to push or pull that wall, drag a body to move, double-click an edge to add a corner, <kbd>Alt</kbd>-click a corner to remove it. Click a storey number in the Blocks panel to edit that storey's own outline. Click a lot edge label to cycle street / lane / neighbour. <kbd>⌘Z</kbd> undo.</div>
     </div>
     <div class="pane"><h2>3D <span class="sp"></span><label class="status"><input type="checkbox" id="chkShadows" checked> shadows</label><label class="status"><input type="checkbox" id="chkFaces" checked> face check</label></h2>
       <canvas id="three"></canvas>
@@ -170,6 +170,14 @@ function newSpec(){
 function normalize(s){ (s.blocks||[]).forEach(b=>{ b.glazing_pct_by_edge=b.glazing_pct_by_edge||{}; b.holes=b.holes||[]; b.roof=b.roof||{parapet_m:0.6,enclosure:null,balconies:[]}; b.roof.balconies=b.roof.balconies||[]; }); s.context=s.context||[]; s.chosen_articles=s.chosen_articles||{}; return s; }
 function polyArea(fp){ let s=0; for(let i=0;i<fp.length;i++){const p=fp[i],q=fp[(i+1)%fp.length]; s+=p[0]*q[1]-q[0]*p[1];} return Math.abs(s)/2; }
 function bbox(pts){ const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]); return [Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)]; }
+// outward unit normal of edge e (pts[e] → pts[e+1]), whichever way the polygon winds
+function edgeNormal(pts,e){ const p=pts[e],q=pts[(e+1)%pts.length]; const L=Math.hypot(q[0]-p[0],q[1]-p[1])||1; const ccw=pts.reduce((s,a,i)=>{const b=pts[(i+1)%pts.length]; return s+a[0]*b[1]-b[0]*a[1];},0)>0; const n=[(q[1]-p[1])/L,-(q[0]-p[0])/L]; return ccw?n:[-n[0],-n[1]]; }
+// push / pull edge e by d metres along its outward normal. The wall stays parallel to itself and the two
+// neighbouring walls keep their direction (their corners slide along them); a neighbour that is nearly
+// parallel to the wall would shoot off to infinity, so its corner is simply carried along with the wall.
+function pullEdge(pts,e,d){ const n=pts.length, out=pts.map(p=>p.slice()); const nrm=edgeNormal(pts,e);
+  const slide=(k,adj)=>{ const P=pts[k],R=pts[adj]; const u=[P[0]-R[0],P[1]-R[1]]; const un=u[0]*nrm[0]+u[1]*nrm[1]; const ul=Math.hypot(u[0],u[1])||1; if(Math.abs(un)/ul<0.15) return [P[0]+nrm[0]*d,P[1]+nrm[1]*d]; const t=1+d/un; return [R[0]+u[0]*t,R[1]+u[1]*t]; };
+  out[e]=slide(e,(e-1+n)%n); out[(e+1)%n]=slide((e+1)%n,(e+2)%n); return out; }
 function insetPoly(pts,d){ const [x0,y0,x1,y1]=bbox(pts); const cx=(x0+x1)/2, cy=(y0+y1)/2; const sx=Math.max(0.1,(x1-x0-2*d)/(x1-x0)), sy=Math.max(0.1,(y1-y0-2*d)/(y1-y0)); return pts.map(p=>[snap(cx+(p[0]-cx)*sx), snap(cy+(p[1]-cy)*sy)]); }
 // what the plan editor is currently editing: the block outline or one storey's own outline
 function editTarget(){ const b=spec.blocks[sel]; if(!b) return null; if(editStorey!=null){ const st=b.storeys[editStorey-1]; if(st&&st.footprint) return {pts:st.footprint, holes:st.holes!=null?st.holes:b.holes, owner:st, label:`L${editStorey}`}; } return {pts:b.footprint, holes:b.holes, owner:b, label:"block"}; }
@@ -203,6 +211,8 @@ function toSvg(x,y){ const {size,ox,oy}=planScale(); return [ (x-ox)/size*100, 1
 function fromSvg(sx,sy){ const {size,ox,oy}=planScale(); return [ sx/100*size+ox, (100-sy)/100*size+oy ]; }
 function clientToSvg(ev){ const r=svg.getBoundingClientRect(); return [ (ev.clientX-r.left)/r.width*100, (ev.clientY-r.top)/r.height*100 ]; }
 const ptsAttr=pts=>pts.map(p=>toSvg(p[0],p[1]).join(",")).join(" ");
+// resize cursor for pulling a wall whose screen-space angle is `ang` degrees: the cursor follows the wall's normal
+function edgeCursor(ang){ const a=(((ang+90)%180)+180)%180; return a<22.5||a>=157.5?"ew-resize":a<67.5?"nwse-resize":a<112.5?"ns-resize":"nesw-resize"; }
 
 function drawPlan(){
   const L=spec.lot; const {size,ox,oy}=planScale(); const s=100/size;
@@ -244,9 +254,12 @@ function drawPlan(){
     const tgt = bi===sel ? editTarget() : {pts:b.footprint, holes:b.holes};
     h+=`<polygon class="blk ${bi===sel?"sel":""}" data-b="${bi}" points="${ptsAttr(tgt.pts)}"/>`;
     (tgt.holes||[]).forEach((hole,hi)=>{ h+=`<polygon class="hole" data-b="${bi}" data-h="${hi}" points="${ptsAttr(hole)}"/>`; if(bi===sel) hole.forEach((p,k)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx h" data-b="${bi}" data-h="${hi}" data-v="${k}" cx="${px}" cy="${py}" r="1.0"/>`; }); });
-    tgt.pts.forEach((p,i)=>{ const q=tgt.pts[(i+1)%tgt.pts.length]; const [mx,my]=toSvg((p[0]+q[0])/2,(p[1]+q[1])/2); const len=Math.hypot(q[0]-p[0],q[1]-p[1]).toFixed(1);
-      h+=`<text class="edgeLbl" x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="middle">${len}</text>`;
-      if(bi===sel){ const [ax,ay]=toSvg(p[0],p[1]),[bx,by]=toSvg(q[0],q[1]); h+=`<line class="edgeHit" data-b="${bi}" data-e="${i}" x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="transparent" stroke-width="2.5" style="cursor:copy"/>`; } });
+    tgt.pts.forEach((p,i)=>{ const q=tgt.pts[(i+1)%tgt.pts.length]; const [ax,ay]=toSvg(p[0],p[1]),[bx,by]=toSvg(q[0],q[1]); const mx=(ax+bx)/2,my=(ay+by)/2; const len=Math.hypot(q[0]-p[0],q[1]-p[1]).toFixed(1);
+      if(bi===sel){ // the wall's length tag doubles as its push / pull handle; the rest of the edge adds a corner on double-click
+        h+=`<line class="edgeHit" data-b="${bi}" data-e="${i}" x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="transparent" stroke-width="2.5" style="cursor:copy"/>`;
+        const ang=Math.atan2(by-ay,bx-ax)*180/Math.PI, rot=(ang>90||ang<-90)?ang+180:ang, w=len.length*1.3+1.8;
+        h+=`<g class="edgeH" data-b="${bi}" data-e="${i}" transform="translate(${mx},${my}) rotate(${rot})" style="cursor:${edgeCursor(ang)}"><rect x="${-w/2}" y="-1.4" width="${w}" height="2.8" rx=".6"/><text text-anchor="middle" dominant-baseline="middle">${len}</text></g>`; }
+      else h+=`<text class="edgeLbl" x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="middle">${len}</text>`; });
     if(bi===sel) tgt.pts.forEach((p,i)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx" data-b="${bi}" data-v="${i}" cx="${px}" cy="${py}" r="1.3"/>`; });
     const [bx0,by0,bx1,by1]=bbox(tgt.pts); const [cx,cy]=toSvg((bx0+bx1)/2,(by0+by1)/2);
     h+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" style="font:600 3px 'IBM Plex Sans Condensed',sans-serif;fill:var(--ink);pointer-events:none">${esc(b.name)} · ${b.storeys.length} st${bi===sel&&editStorey!=null?` · editing L${editStorey}`:""}</text>`;
@@ -259,6 +272,7 @@ svg.addEventListener("pointerdown",ev=>{
   if(t.classList.contains("vtx")&&t.dataset.c!==undefined){ ctxSel=+t.dataset.c; drag={kind:"cvtx",c:+t.dataset.c,v:+t.dataset.v}; svg.setPointerCapture(ev.pointerId); }
   else if(t.classList.contains("vtx")&&t.dataset.h!==undefined){ const tgt=editTarget(); const hole=tgt.holes[+t.dataset.h]; if(ev.altKey){ if(hole.length>3){ hole.splice(+t.dataset.v,1); changed(); } return; } drag={kind:"hvtx",h:+t.dataset.h,v:+t.dataset.v}; svg.setPointerCapture(ev.pointerId); }
   else if(t.classList.contains("vtx")){ const b=+t.dataset.b, v=+t.dataset.v; sel=b; const tgt=editTarget(); if(ev.altKey){ if(tgt.pts.length>3){ tgt.pts.splice(v,1); changed(); } return; } drag={kind:"vtx",v}; svg.setPointerCapture(ev.pointerId); }
+  else if(t.closest(".edgeH")){ const g=t.closest(".edgeH"); sel=+g.dataset.b; ctxSel=null; const tgt=editTarget(); drag={kind:"edge",e:+g.dataset.e,pts0:tgt.pts.map(p=>p.slice()),start:[x,y]}; svg.setPointerCapture(ev.pointerId); }
   else if(t.classList.contains("hole")){ sel=+t.dataset.b; drag={kind:"hmove",h:+t.dataset.h,last:[x,y]}; svg.setPointerCapture(ev.pointerId); }
   else if(t.classList.contains("ctx")){ ctxSel=+t.dataset.c; drag={kind:"cmove",c:ctxSel,last:[x,y]}; svg.setPointerCapture(ev.pointerId); drawPlan(); drawCtxPanel(); }
   else if(t.classList.contains("blk")){ if(sel!==+t.dataset.b){ sel=+t.dataset.b; editStorey=null; } ctxSel=null; drag={kind:"move",last:[x,y]}; svg.setPointerCapture(ev.pointerId); drawPlan(); drawBlockPanel(); }
@@ -269,6 +283,9 @@ svg.addEventListener("pointerdown",ev=>{
 svg.addEventListener("pointermove",ev=>{ if(!drag) return; const [x,y]=fromSvg(...clientToSvg(ev)); const L=spec.lot; const tgt=editTarget();
   const inLot=(p)=>[snap(clamp(p[0],0,L.width_m)),snap(clamp(p[1],0,L.depth_m))];
   if(drag.kind==="vtx"){ tgt.pts[drag.v]=L.polygon?[snap(x),snap(y)]:inLot([x,y]); }
+  else if(drag.kind==="edge"){ // the pull distance snaps to 0.1 m; only the wall's two corners move, and they keep mm precision so an untouched coordinate (e.g. x = 15.24) survives
+    const nrm=edgeNormal(drag.pts0,drag.e); const d=snap((x-drag.start[0])*nrm[0]+(y-drag.start[1])*nrm[1]); const np=pullEdge(drag.pts0,drag.e,d), n=np.length;
+    [drag.e,(drag.e+1)%n].forEach(i=>{ const p=np[i].map(v=>Math.round(v*1000)/1000); tgt.pts[i]=L.polygon?p:[clamp(p[0],0,L.width_m),clamp(p[1],0,L.depth_m)]; }); }
   else if(drag.kind==="hvtx"){ tgt.holes[drag.h][drag.v]=[snap(x),snap(y)]; }
   else if(drag.kind==="cvtx"){ spec.context[drag.c].footprint[drag.v]=[snap(x),snap(y)]; }
   else if(drag.kind==="move"||drag.kind==="hmove"||drag.kind==="cmove"){ const dx=x-drag.last[0], dy=y-drag.last[1]; const fp=drag.kind==="move"?tgt.pts:drag.kind==="hmove"?tgt.holes[drag.h]:spec.context[drag.c].footprint;
@@ -500,10 +517,33 @@ $("#btnSummary").onclick=()=>{ if(results) showSummary(spec, results, "current m
 const Rhino={path:null,mtime:null,timer:null};
 function rhSet(state,msg){ const el=$("#rhStatus"); el.innerHTML=`<span class="dot ${state}"></span>${esc(msg)}`; }
 $("#rhExport").onclick=async()=>{ const r=await fetch("/api/rhino/export",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({spec,path:$("#rhPath").value||null})}); if(!r.ok){ rhSet("err","export failed: "+(await r.text()).slice(0,120)); return; } const j=await r.json(); Rhino.path=j.path; Rhino.mtime=j.mtime; $("#rhPath").value=j.path; rhSet("on","exported "+new Date().toLocaleTimeString()); toast("site.3dm written — open it in Rhino"); };
-$("#rhDownload").onclick=()=>{ const p=$("#rhPath").value||Rhino.path; if(!p){ toast("export first"); return; } window.open("/api/rhino/file?path="+encodeURIComponent(p),"_blank"); };
+$("#rhDownload").onclick=()=>{ const p=$("#rhPath").value||Rhino.path; if(!p){ toast("export first"); return; } window.open("/api/rhino/file?path="+encodeURIComponent(p),"_blank"); toast("downloading — if you open and save that copy in Rhino, the watch follows it"); };
 async function rhImport(){ const p=$("#rhPath").value||Rhino.path; if(!p){ toast("set a .3dm path first"); return; } rhSet("on","reading…"); const r=await fetch("/api/rhino/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({path:p})}); if(!r.ok){ rhSet("err","import failed: "+(await r.text()).slice(0,140)); return; } const j=await r.json(); Rhino.path=p; Rhino.mtime=j.mtime; spec=normalize(j.spec); sel=Math.min(sel,spec.blocks.length-1); editStorey=null; changed(true); $("#rhWarn").innerHTML=j.warnings.map(w=>`<div class="flag info">${esc(w)}</div>`).join(""); rhSet("on","updated from Rhino "+new Date().toLocaleTimeString()); toast("massing updated from Rhino"); }
 $("#rhImport").onclick=rhImport;
-$("#rhWatch").onchange=()=>{ clearInterval(Rhino.timer); if($("#rhWatch").checked){ const p=$("#rhPath").value||Rhino.path; if(!p){ $("#rhWatch").checked=false; toast("export first, then watch"); return; } Rhino.path=p; rhSet("on","watching "+p.split(/[\\/]/).pop()); Rhino.timer=setInterval(async()=>{ try{ const j=await (await fetch("/api/rhino/status?path="+encodeURIComponent(Rhino.path))).json(); if(j.exists&&Rhino.mtime!=null&&j.mtime>Rhino.mtime+0.001){ Rhino.mtime=j.mtime; await new Promise(r=>setTimeout(r,400)); await rhImport(); } else if(j.exists&&Rhino.mtime==null) Rhino.mtime=j.mtime; }catch(e){ rhSet("err","server unreachable"); } },1200); } else rhSet("","not watching"); };
+// One tick of the watch loop. Imports when the watched file changed AND Rhino has finished writing it
+// (same mtime and size on two consecutive polls). If the watched file is untouched but Rhino saved a
+// same-named copy in ~/Downloads (the Download button put it there), the watch moves to that copy.
+async function rhPoll(){
+  if(Rhino.busy) return;
+  try{
+    const j=await (await fetch("/api/rhino/status?path="+encodeURIComponent(Rhino.path))).json();
+    const changed=j.exists&&Rhino.mtime!=null&&j.mtime>Rhino.mtime+0.001;
+    const copy=(j.newer_copies||[])[0];
+    if(!changed&&copy){
+      Rhino.path=copy.path; $("#rhPath").value=copy.path; Rhino.mtime=0; Rhino.pending=null;
+      $("#rhWarn").innerHTML=`<div class="flag info">${esc("Following "+copy.path+": Rhino saved this copy. Type another path to watch a different file.")}</div>`;
+      rhSet("on","watching "+copy.path.split(/[\\/]/).pop());
+      return;                                   // next tick sees it as changed and imports once it has settled
+    }
+    if(j.exists&&Rhino.mtime==null){ Rhino.mtime=j.mtime; return; }
+    if(!changed) return;
+    const key=j.mtime+":"+j.size;
+    if(Rhino.pending!==key){ Rhino.pending=key; rhSet("on","Rhino is saving…"); return; }
+    Rhino.pending=null; Rhino.busy=true;
+    try{ await rhImport(); } finally{ Rhino.busy=false; }
+  }catch(e){ rhSet("err","server unreachable"); }
+}
+$("#rhWatch").onchange=()=>{ clearInterval(Rhino.timer); if($("#rhWatch").checked){ const p=$("#rhPath").value||Rhino.path; if(!p){ $("#rhWatch").checked=false; toast("export first, then watch"); return; } Rhino.path=p; Rhino.pending=null; Rhino.busy=false; rhSet("on","watching "+p.split(/[\\/]/).pop()); Rhino.timer=setInterval(rhPoll,1200); } else rhSet("","not watching"); };
 // @@RHINO-END
 
 // ------------------------------------------------------------------ in-page code compliance summary

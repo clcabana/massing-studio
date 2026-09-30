@@ -72,10 +72,14 @@ Everything the wizard sets is editable afterwards in the Lot, Blocks and Context
 2. Open it in Rhino 7/8. Move, scale, redraw or add solids under `Massing::<Block>` (a Box on the block's layer is
    enough — it inherits the attributes of the storey it replaces or the last exported one). Closed curves with
    user text `kind=hole` on a storey's layer are courtyards. Redraw the property line to change the lot.
-3. **Save** in Rhino. With **watch file** ticked, the app polls the file every 1.2 s, re-reads the Massing layers,
-   rebuilds the storey stack (sorted by base elevation), and re-runs the whole analysis. Warnings (storeys that
-   don't sit on each other, a changed footprint that resets per-edge glazing, a redrawn lot) appear under the panel.
-   "Import now" does the same on demand; "Download" fetches the file through the browser.
+3. **Save** in Rhino. With **watch file** ticked, the app polls the file every 1.2 s, waits until Rhino has
+   finished writing it (same size and time on two polls), re-reads the Massing layers, rebuilds the storey stack
+   (sorted by base elevation), and re-runs the whole analysis. Rhino re-saves edited storeys as Breps rather than
+   extrusions; the importer reads both. Warnings (storeys that don't sit on each other, a changed footprint that
+   resets per-edge glazing, a redrawn lot) appear under the panel. "Import now" does the same on demand.
+   "Download" fetches the file through the browser into your Downloads folder; if you open **that** copy in
+   Rhino and save it, the watch notices the newer same-named file in Downloads and follows it (the path box
+   updates so you can see which file is live).
 
 `pip install rhino3dm` is the only extra dependency. The published artifact cannot read files on your disk, so the
 Rhino panel is local-app only.

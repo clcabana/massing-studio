@@ -229,8 +229,23 @@ def _num(s, default=None):
         return default
 
 
+def _same_ring(a, b, tol: float = 0.01) -> bool:
+    """Same closed outline, whatever the start vertex or winding (Rhino may re-order a polyline on save)."""
+    if not a or not b or len(a) != len(b):
+        return False
+    n = len(a)
+    for seq in (list(b), list(b)[::-1]):
+        for k in range(n):
+            rolled = seq[k:] + seq[:k]
+            if all(abs(p[0] - q[0]) <= tol and abs(p[1] - q[1]) <= tol for p, q in zip(a, rolled)):
+                return True
+    return False
+
+
 def import_3dm(path: str | pathlib.Path) -> tuple[MassingSpec, list[str]]:
     m = rh.File3dm.Read(str(path))
+    if m is None:                                # rhino3dm returns None for a file it cannot parse: mid-save, or not a .3dm
+        raise ValueError("not a readable .3dm file (Rhino may still be writing it)")
     warnings: list[str] = []
     base = None
     try:
@@ -279,7 +294,8 @@ def import_3dm(path: str | pathlib.Path) -> tuple[MassingSpec, list[str]]:
         lot = Lot(width_m=1, depth_m=1)
     if lot_pts:
         same_rect = (not lot.polygon) and len(lot_pts) == 4 and all(abs(p[0] - q[0]) < 0.01 and abs(p[1] - q[1]) < 0.01 for p, q in zip(lot_pts, [[0, 0], [lot.width_m, 0], [lot.width_m, lot.depth_m], [0, lot.depth_m]]))
-        if not same_rect:
+        same_poly = bool(lot.polygon) and _same_ring(lot_pts, lot.polygon)     # a parcel-picked lot, untouched in Rhino
+        if not (same_rect or same_poly):
             xs = [p[0] for p in lot_pts]; ys = [p[1] for p in lot_pts]
             if len(lot_pts) == 4 and all(abs(p[0] - q[0]) < 0.01 and abs(p[1] - q[1]) < 0.01 for p, q in zip(lot_pts, [[min(xs), min(ys)], [max(xs), min(ys)], [max(xs), max(ys)], [min(xs), max(ys)]])) and abs(min(xs)) < 0.01 and abs(min(ys)) < 0.01:
                 lot.width_m, lot.depth_m = round(max(xs), 3), round(max(ys), 3); lot.polygon = None
