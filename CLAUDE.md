@@ -73,7 +73,8 @@ Massing Studio is published as a Claude artifact: https://claude.ai/artifact/9JH
 
 ## Open items
 
-- Parcel map: `app/parcels.py` DATASETS ids/fields need a live check against opendata.vancouver.ca.
+- Parcel map: DATASETS ids/fields verified live against opendata.vancouver.ca on 2026-09-29. The Explore API
+  caps `limit` at 100 per request, so `_ods` pages with `offset`; `tests/test_parcels.py` pins that.
 - First real Save-in-Rhino test of the watch loop (verified only with rhino3dm round trips).
 - Group A ladder covers A2 only; Table 3.2.2.68 not extracted; BCBC 2024 text parser not built.
 - Egress *layout* (3.3, 3.4.2.3–.4) and washroom accessibility layout (3.8) are out of scope by design.

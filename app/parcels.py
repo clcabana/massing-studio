@@ -36,15 +36,29 @@ DATASETS = {
 }
 STREET_MAX_M, LANE_MAX_M = 28.0, 9.0      # a centreline farther than this is not "this edge's" street/lane
 FIXTURE = os.environ.get("CODESHEET_FIXTURE") == "1"
+PAGE = 100                                 # Explore API v2.1 /records rejects limit > 100; page with offset instead
+
+
+def _ods_page(ds: str, where: str, limit: int, offset: int) -> list[dict]:
+    q = {"where": where, "limit": limit, "offset": offset}
+    url = BASE.format(ds=ds) + "?" + urllib.parse.urlencode(q)
+    req = urllib.request.Request(url, headers={"User-Agent": "massing-studio/1.0"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read())["results"]
 
 
 # ---------------------------------------------------------------------------- fetch
 
 def _ods(ds: str, lon: float, lat: float, radius_m: float, limit: int = 100) -> list[dict]:
-    q = {"where": f"within_distance(geom, geom'POINT({lon} {lat})', {int(radius_m)}m)", "limit": limit}
-    url = BASE.format(ds=ds) + "?" + urllib.parse.urlencode(q)
-    with urllib.request.urlopen(url, timeout=20) as r:
-        return json.loads(r.read())["results"]
+    """Up to `limit` records within radius_m of the point, fetched in pages of PAGE (the API's maximum)."""
+    where = f"within_distance(geom, geom'POINT({lon} {lat})', {int(radius_m)}m)"
+    out: list[dict] = []
+    while len(out) < limit:
+        page = _ods_page(ds, where, min(PAGE, limit - len(out)), len(out))
+        out.extend(page)
+        if len(page) < PAGE:
+            break
+    return out
 
 
 def _geom(rec: dict):
