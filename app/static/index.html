@@ -215,7 +215,8 @@ $("#btnUndo").onclick=undo; $("#btnRedo").onclick=redo;
 
 // ------------------------------------------------------------------ theme
 const themeKey="massing-studio-theme";
-function applyTheme(t){ document.documentElement.dataset.theme=t; try{ localStorage.setItem(themeKey,t); }catch(e){} if(typeof render3d==="function") setTimeout(render3d,0); }
+// the 3D palette is chosen when the scene is built, so a theme change rebuilds it (render alone would keep the old colours)
+function applyTheme(t){ document.documentElement.dataset.theme=t; try{ localStorage.setItem(themeKey,t); }catch(e){} if(typeof build3d==="function") setTimeout(build3d,0); }
 try{ const t=localStorage.getItem(themeKey); if(t) document.documentElement.dataset.theme=t; }catch(e){}
 $("#btnTheme").onclick=()=>{ const cur=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"); applyTheme(cur==="dark"?"light":"dark"); };
 const isDark=()=>{ const t=document.documentElement.dataset.theme; return t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches; };
@@ -524,7 +525,8 @@ const ENGINE_LABEL="VBBL 2025";
 // @@API-END
 async function analyze(){
   try{ results=await apiAnalyze(spec); drawResults(); if($("#chkFaces").checked) build3d(); $("#status").textContent=`checked ${new Date().toLocaleTimeString()} · ${ENGINE_LABEL}`; $("#status").className="status";
-  }catch(e){ console.error(e); $("#status").textContent="error: "+String(e.message||e).slice(0,160); $("#status").className="status err"; }
+  }catch(e){ console.error(e); $("#status").textContent="error: "+String(e.message||e).slice(0,160); $("#status").className="status err";
+    if(results){ results=null; $("#results").innerHTML=""; $("#resBadge").textContent=""; build3d(); } }   // no stale faces from the previous massing
 }
 function gauge(it){ const frac=Math.min(1,it.value/it.cap); const cls=it.headroom<0?"over":frac>0.85?"tight":""; return `<div class="gauge ${cls}"><div class="t"><span>${it.what}</span><span class="mono">${fmt(it.value)} / ${fmt(it.cap)} ${it.unit} · <b>${it.headroom<0?"over by "+fmt(-it.headroom):fmt(it.headroom)+" left"}</b></span></div><div class="bar"><i style="width:${frac*100}%"></i></div></div>`; }
 const wcText=w=>w.male_wc!==null&&w.male_wc!==undefined?`${w.group}: ${w.male_wc}M+${w.female_wc}F wc, ${w.lavatories.male+w.lavatories.female} lav`:(w.group==="C"?`C: 1 wc/unit${w.dwelling_units?` (${w.dwelling_units})`:""}`:"");
@@ -649,5 +651,5 @@ function showSummary(sp, r, name){
 normalize(spec); hist.last=JSON.stringify(spec); updateHistBtns();
 drawLotFields(); drawPlan(); drawBlockPanel(); drawCtxPanel(); build3d(); analyze(); loadLib();
 </script>
-<script src="/wizard.js"></script>
+<script src="/wizard.js?v=20261002"></script>
 </body></html>

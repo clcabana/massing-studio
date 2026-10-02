@@ -80,7 +80,8 @@ Massing Studio is published as a Claude artifact: https://claude.ai/artifact/9JH
   public-trees: height_m, diameter_cm, common_name). The Explore API caps `limit` at 100 per request, so `_ods`
   pages with `offset`; `tests/test_parcels.py` pins that and the context assembly on live-shaped records.
   Site context (spec.context / spec.trees / spec.streets) is for the 3D view, the plan and the Rhino file only;
-  the engine ignores it. The live fetch has not been exercised from this machine, only the fixture and mocks.
+  the engine ignores it. Live fetch exercised 2026-10-02 (W 10th Ave, Kitsilano: 26 buildings, 51 trees, 3 names in ~1.2 s).
+  Open Data calls run concurrently and are cached 10 min in `parcels._CACHE`; tests that mock `_ods_page` reset it.
 - Save-in-Rhino: first real test done 2026-09-29 with Rhino 8. Findings: Rhino re-saves edited storeys as
   Breps (importer handles it); the Download button's copy lands in ~/Downloads, so `/api/rhino/status`
   reports newer same-named copies there and the UI follows them; import waits for the file to settle and

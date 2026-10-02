@@ -361,7 +361,8 @@ if __name__ == "__main__":
     a = ap.parse_args()
     PROJECTS = pathlib.Path(a.projects)
     PROJECTS.mkdir(parents=True, exist_ok=True)
-    print(f"Massing Studio → http://127.0.0.1:{a.port}   (iterations saved under {PROJECTS}{'; auto-reload on' if a.reload else ''})")
+    # ASCII only: with stdout redirected to a file Windows uses cp1252, and a stray arrow kills the server at startup
+    print(f"Massing Studio -> http://127.0.0.1:{a.port}   (iterations saved under {PROJECTS}{'; auto-reload on' if a.reload else ''})", flush=True)
     if a.reload:
         os.environ["CODESHEET_PROJECTS"] = str(PROJECTS)
         uvicorn.run("app.server:app", host="127.0.0.1", port=a.port, log_level="warning", reload=True,
