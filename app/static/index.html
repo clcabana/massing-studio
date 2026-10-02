@@ -15,9 +15,9 @@ header h1{font:500 24px/.92 "Helvetica Neue",Helvetica,Arial,sans-serif;margin:0
 header input{font:inherit;padding:5px 10px;border:1px solid transparent;border-radius:4px;min-width:220px;background:var(--sheet-a);color:var(--ink);box-shadow:var(--float)} header input:focus{outline:0;border-color:var(--rule)}
 button{font:inherit;padding:5px 10px;border:1px solid var(--ink);background:var(--sheet);color:var(--ink);border-radius:4px;cursor:pointer;transition:background .15s} button:hover{background:var(--paper)} button.pri{background:var(--ink);color:var(--sheet)} button.pri:hover{opacity:.9} button.sm{padding:2px 7px;font-size:12px} button:disabled{opacity:.4;cursor:default} button.ghost{border-color:transparent;background:transparent;color:var(--ink2)} button.ghost:hover{background:var(--sheet-a)}
 header>button{border-color:transparent;background:var(--sheet-a);box-shadow:var(--float)} header>button:hover{background:var(--sheet)} header>button.ghost{box-shadow:none;background:transparent} header>button.pri{background:var(--ink);color:var(--sheet)}
-main{display:grid;grid-template-columns:1fr 340px;gap:0;min-height:0}
-/* the stage: the 3D view fills it, the plan editor and the view controls float over it */
-.stage{position:relative;min-height:0;background:var(--sky);overflow:hidden}
+main{position:relative;min-height:0}
+/* the stage is the whole screen below the header; the plan editor, the view controls and the sidebar panes all float over it */
+.stage{position:absolute;inset:0;background:var(--sky);overflow:hidden}
 #three{position:absolute;inset:0;width:100%;height:100%;display:block;background:var(--sky);cursor:grab} #three:active{cursor:grabbing}
 #labels3d{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .lbl3d{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:500 11px "IBM Plex Sans",sans-serif;color:var(--ink);background:var(--sheet-a);border-radius:999px;padding:1px 8px 1px 6px;box-shadow:0 1px 4px rgba(0,0,0,.08)} .lbl3d i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px}
@@ -27,11 +27,12 @@ main{display:grid;grid-template-columns:1fr 340px;gap:0;min-height:0}
 #plan{width:340px;height:340px;max-width:calc(100vw - 400px);max-height:calc(100vh - 170px);display:block;background:var(--sheet);border:1px solid var(--rule);touch-action:none;user-select:none}
 .planBox.big #plan{width:580px;height:580px} .planBox.min #plan,.planBox.min .planHelp,.planBox.min .legend{display:none}
 .planHelp{max-width:340px} .planBox.big .planHelp{max-width:580px} .planHelp summary{cursor:pointer;color:var(--mut);font-size:11px;margin-top:5px;list-style:none} .planHelp summary::-webkit-details-marker{display:none} .planHelp summary:before{content:"▸ "} .planHelp[open] summary:before{content:"▾ "} .planHelp .hint{margin-top:3px}
-.viewBox{right:12px;top:12px;padding:0;font-size:11.5px;color:var(--ink2);min-width:0} .viewBox summary{cursor:pointer;list-style:none;padding:5px 10px;font:600 11px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)} .viewBox summary::-webkit-details-marker{display:none} .viewBox summary:before{content:"▸ "} .viewBox[open] summary:before{content:"▾ "} .viewBox .vb{padding:0 10px 8px;width:260px} .viewBox .vb label.status{display:block;margin:3px 0}
+.viewBox{left:12px;top:12px;padding:0;font-size:11.5px;color:var(--ink2);min-width:0} .viewBox summary{cursor:pointer;list-style:none;padding:5px 10px;font:600 11px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)} .viewBox summary::-webkit-details-marker{display:none} .viewBox summary:before{content:"▸ "} .viewBox[open] summary:before{content:"▾ "} .viewBox .vb{padding:0 10px 8px;width:260px} .viewBox .vb label.status{display:block;margin:3px 0}
 .sun{display:grid;grid-template-columns:auto 1fr auto 1fr auto;gap:6px 8px;align-items:center;font-size:11.5px;color:var(--ink2);margin-top:6px} .sun input[type=range]{width:100%}
-/* the sidebar: every panel is a dropdown that floats on the same grey as the 3D view (no rule between them) */
-.side{min-height:0;overflow:auto;background:transparent;padding:12px 12px 12px 0;scrollbar-width:thin;scrollbar-color:var(--rule) transparent}
-details.pane{background:var(--sheet-a);border-radius:6px;box-shadow:var(--float);backdrop-filter:blur(6px);margin:0 0 8px} .side>details.pane:first-child{margin-top:0}
+/* the sidebar: a column of dropdown panes floating over the right of the 3D view. The column itself is
+   transparent to the pointer (orbit and zoom work in the gaps between panes); only the panes catch events. */
+.side{position:absolute;top:12px;right:12px;bottom:0;width:340px;overflow:auto;background:transparent;padding:0 0 12px;pointer-events:none;scrollbar-width:none} .side::-webkit-scrollbar{display:none}
+details.pane{pointer-events:auto;background:var(--sheet-a);border-radius:6px;box-shadow:var(--float);backdrop-filter:blur(6px);margin:0 0 8px}
 details.pane>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:9px 12px;font:600 11.5px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);user-select:none;border-radius:6px} details.pane>summary::-webkit-details-marker{display:none}
 details.pane>summary:before{content:"▸";font-size:10px;width:10px;color:var(--mut);transition:transform .15s} details.pane[open]>summary:before{transform:rotate(90deg)} details.pane>summary .sp{flex:1} details.pane>summary:hover{color:var(--ink2)} details.pane>summary .acts{display:flex;gap:4px;text-transform:none;letter-spacing:0} details.pane>summary .status{text-transform:none;letter-spacing:0;font-weight:400}
 details.pane>.body{padding:2px 12px 12px} details.pane>.body .card{margin:8px 0;background:var(--sheet);border-color:var(--rule)}
@@ -344,6 +345,9 @@ svg.addEventListener("pointermove",ev=>{ if(!drag) return; const [x,y]=fromSvg(.
     [drag.e,(drag.e+1)%n].forEach(i=>{ const p=np[i].map(v=>Math.round(v*1000)/1000); pts[i]=(L.polygon||drag.h!=null)?p:[clamp(p[0],0,L.width_m),clamp(p[1],0,L.depth_m)]; }); }
   else if(drag.kind==="hvtx"){ tgt.holes[drag.h][drag.v]=[snap(x),snap(y)]; }
   else if(drag.kind==="cvtx"){ spec.context[drag.c].footprint[drag.v]=[snap(x),snap(y)]; }
+  else if(drag.kind==="cedge"){ // a neighbour's wall pulls like a block's, with no lot to clamp to
+    const nrm=edgeNormal(drag.pts0,drag.e); const d=snap((x-drag.start[0])*nrm[0]+(y-drag.start[1])*nrm[1]); const np=pullEdge(drag.pts0,drag.e,d), n=np.length; const fp=spec.context[drag.c].footprint;
+    [drag.e,(drag.e+1)%n].forEach(i=>{ fp[i]=np[i].map(v=>Math.round(v*1000)/1000); }); }
   else if(drag.kind==="move"||drag.kind==="hmove"||drag.kind==="cmove"){ const dx=x-drag.last[0], dy=y-drag.last[1]; const fp=drag.kind==="move"?tgt.pts:drag.kind==="hmove"?tgt.holes[drag.h]:spec.context[drag.c].footprint;
     let ddx=dx, ddy=dy; if(drag.kind==="move"&&!L.polygon){ const xs=fp.map(p=>p[0]), ys=fp.map(p=>p[1]); ddx=clamp(dx,-Math.min(...xs),L.width_m-Math.max(...xs)); ddy=clamp(dy,-Math.min(...ys),L.depth_m-Math.max(...ys)); }
     fp.forEach(p=>{p[0]=snap(p[0]+ddx); p[1]=snap(p[1]+ddy);}); if(drag.kind==="move"&&tgt.owner===spec.blocks[sel]) (tgt.holes||[]).forEach(hh=>hh.forEach(p=>{p[0]=snap(p[0]+ddx); p[1]=snap(p[1]+ddy);})); drag.last=[x,y]; }
@@ -429,7 +433,7 @@ function drawCtxPanel(){
   document.querySelectorAll(".cH").forEach(el=>el.onchange=()=>{ C[+el.dataset.i].height_m=+el.value; changed(); });
   document.querySelectorAll(".cDel").forEach(el=>el.onclick=()=>{ C.splice(+el.dataset.i,1); ctxSel=null; changed(); });
 }
-$("#btnAddCtx").onclick=()=>{ const L=spec.lot; const W=L.polygon?bbox(L.polygon)[2]:L.width_m; spec.context.push({name:`neighbour ${spec.context.length+1}`, footprint:[[W+1,2],[W+11,2],[W+11,Math.min(22,L.depth_m*0.6)],[W+1,Math.min(22,L.depth_m*0.6)]], height_m:9.5}); ctxSel=spec.context.length-1; changed(); };
+$("#btnAddCtx").onclick=()=>{ const L=spec.lot; const W=L.polygon?bbox(L.polygon)[2]:L.width_m; const d=Math.min(22,L.depth_m*0.6); spec.context.push({name:`neighbour ${spec.context.length+1}`, footprint:[[W+1,2],[W+11,2],[W+11,d],[W+1,d]].map(p=>[snap(p[0]),snap(p[1])]), height_m:9.5}); ctxSel=spec.context.length-1; changed(); };
 $("#btnAddBlock").onclick=()=>{ const n=String.fromCharCode(65+spec.blocks.length); const w=Math.min(10,spec.lot.width_m*0.5), d=Math.min(10,spec.lot.depth_m*0.3); spec.blocks.push({name:n, footprint:[[0,0],[w,0],[w,d],[0,d]], holes:[], roof:{parapet_m:0.6,enclosure:null,balconies:[]}, first_floor_above_grade_m:0.1, default_glazing_pct:30, glazing_pct_by_edge:{}, storeys:[{occupancy:"C",use:"suites",floor_to_floor_m:3},{occupancy:"C",use:"suites",floor_to_floor_m:3}]}); sel=spec.blocks.length-1; editStorey=null; changed(); };
 $("#btnDelBlock").onclick=()=>{ if(spec.blocks.length>1){ spec.blocks.splice(sel,1); sel=0; editStorey=null; changed(); } };
 $("#btnNew").onclick=()=>{ spec=newSpec(); sel=0; editStorey=null; changed(true); };
