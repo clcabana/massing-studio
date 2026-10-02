@@ -107,13 +107,17 @@ function insetBBox(front,side,rear){ const L=spec.lot; let minx=0,miny=0,maxx=L.
   const x0=r2(Math.max(minx,minx+side)), x1=r2(Math.min(maxx,maxx-side)), y0=r2(Math.max(miny,miny+front)), y1=r2(Math.min(maxy,maxy-rear)); return [[x0,y0],[x1,y0],[x1,y1],[x0,y1]]; }
 
 async function blockWizard(first){
-  const P=await loadPresets();
+  const P=await loadPresets(); await loadZoning();
+  // the lot's district (from the map, or chosen when describing the site) sets the minimum yards; the questionnaire
+  // asks for a setback only where the schedule has none encoded, and tells you which it took from the schedule
+  const zy=zoningYards(); const fromZoning=[["front",zy.front],["side",zy.side],["rear",zy.rear]].filter(([k,v])=>v!=null);
+  const zHelp=fromZoning.length?`${zy.district}: ${fromZoning.map(([k,v])=>`${k} ${v} m`).join(", ")} taken from the district schedule.`:"";
   const a=await runStepper(first?"Add the first block":"Add a block",[
     {id:"type", title:"What kind of building is this block?", type:"choice", options:P.types.map(t=>({label:t.label, desc:`ground: ${t.ground.use} (${t.ground.occupancy}) · above: ${t.upper.use} (${t.upper.occupancy})`, value:t.id}))},
-    {id:"storeys", title:"How many storeys?", help:"Storeys above grade. You can add or remove later.", type:"choice", default:4, options:[2,3,4,5,6,8,12].map(n=>({label:`${n}`, value:n})), custom:{label:"or enter", step:1}},
-    {id:"front", title:"Front setback from the street", type:"choice", default:0, options:[{label:"0 m — build to the line",value:0},{label:"1.2 m",value:1.2},{label:"3 m",value:3},{label:"6 m",value:6}], custom:{label:"or enter metres"}},
-    {id:"side", title:"Side setbacks", help:"0 m gives party walls at the property line: no windows permitted and a 1 h noncombustible wall.", type:"choice", default:0, options:[{label:"0 m — party walls",value:0},{label:"1.2 m",value:1.2},{label:"3 m",value:3},{label:"4.5 m",value:4.5}], custom:{label:"or enter metres"}},
-    {id:"rear", title:"Rear setback", type:"choice", default:1, options:[{label:"0 m",value:0},{label:"1 m",value:1},{label:"6 m",value:6},{label:"Half the lot (courtyard/yard)",value:"half"}], custom:{label:"or enter metres"}},
+    {id:"storeys", title:"How many storeys?", help:"Storeys above grade. You can add or remove later."+(zy.district?` Zoning ${zy.district} is checked live in the Code check.`:""), type:"choice", default:4, options:[2,3,4,5,6,8,12].map(n=>({label:`${n}`, value:n})), custom:{label:"or enter", step:1}},
+    {id:"front", title:"Front setback from the street", help:zHelp||undefined, type:"choice", default:0, options:[{label:"0 m — build to the line",value:0},{label:"1.2 m",value:1.2},{label:"3 m",value:3},{label:"6 m",value:6}], custom:{label:"or enter metres"}, when:()=>zy.front==null},
+    {id:"side", title:"Side setbacks", help:"0 m gives party walls at the property line: no windows permitted and a 1 h noncombustible wall. "+zHelp, type:"choice", default:0, options:[{label:"0 m — party walls",value:0},{label:"1.2 m",value:1.2},{label:"3 m",value:3},{label:"4.5 m",value:4.5}], custom:{label:"or enter metres"}, when:()=>zy.side==null},
+    {id:"rear", title:"Rear setback", help:zHelp||undefined, type:"choice", default:1, options:[{label:"0 m",value:0},{label:"1 m",value:1},{label:"6 m",value:6},{label:"Half the lot (courtyard/yard)",value:"half"}], custom:{label:"or enter metres"}, when:()=>zy.rear==null},
     {id:"stepback", title:"Upper-storey stepback?", help:"Upper storeys pull back from the street; each storey then carries its own outline you can reshape in the plan.", type:"choice", default:"none", options:[
       {label:"None — straight extrusion", value:"none"},{label:"3 m from the street above the 2nd storey", value:"3@3"},{label:"3 m from the street above the 4th storey", value:"3@5"},{label:"6 m on all sides above the 2nd storey (podium + tower)", value:"6all@3"}]},
     {id:"court", title:"Courtyard?", help:"A courtyard is subtracted from the building area; its inner faces do not expose each other (same building).", type:"choice", default:"none", options:[
@@ -129,12 +133,16 @@ async function blockWizard(first){
   ]);
   if(!a) return;
   const t=P.types.find(x=>x.id===a.type); const n=Math.max(1,Math.round(a.storeys||t.default_storeys));
-  const rear = a.rear==="half" ? (spec.lot.depth_m*0.5) : a.rear;
-  const fp=insetBBox(a.front,a.side,rear);
+  // setbacks: the district's minimum yards where encoded, else the answers (a corner lot's flanking yard, when the schedule has one, is the larger side)
+  const front = zy.front!=null ? zy.front : a.front;
+  const side = zy.side!=null ? (zy.flank!=null ? Math.max(zy.side, zy.flank) : zy.side) : a.side;
+  const rear = zy.rear!=null ? zy.rear : (a.rear==="half" ? (spec.lot.depth_m*0.5) : a.rear);
+  const fp=insetBBox(front,side,rear);
+  if(fromZoning.length) toast(`Setbacks from the ${zy.district} schedule: ${fromZoning.map(([k,v])=>`${k} ${v} m`).join(", ")}${fromZoning.length<3?" — the rest as answered":""}. Edit them in the Lot panel.`);
   const blk={name:a.name||"A", footprint:fp, holes:[], roof:{parapet_m:(a.roof||[]).includes("parapet")?0.6:0, enclosure:null, balconies:[]}, first_floor_above_grade_m:0.1, default_glazing_pct: a.glaz==="auto"?30:a.glaz, glazing_pct_by_edge:{},
     storeys:[{...t.ground}].concat(Array.from({length:n-1},()=>({...t.upper})))};
   if(a.glaz==="auto") fp.forEach((p,i)=>{ blk.glazing_pct_by_edge[i]=P.glazing_by_exposure[edgeExposure(fp,i)]; });
-  spec.lot.setbacks={front:a.front, side:a.side, rear:rear};
+  spec.lot.setbacks={front:front, side:side, rear:rear};
   // stepbacks → per-storey outlines
   if(a.stepback&&a.stepback!=="none"){ const [d,from]=a.stepback.replace("all","").split("@").map(Number); const all=a.stepback.includes("all");
     const r2=v=>Math.round(v*100)/100; const [[x0,y0],[x1,,],[,y1]]=[fp[0],fp[1],fp[2]];

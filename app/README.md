@@ -22,7 +22,9 @@ The app opens with a questionnaire (multiple choice wherever possible):
    right-of-way width of the front street (local 20 m / arterial 30 m / major 40 m), lane at the rear,
    grade, sprinklered, project name
 3. **Add a block** (also from the "+ block…" button) — building type preset (residential, mixed-use retail+res,
-   retail+office, office, assembly+res, townhouse), storeys, front/side/rear setbacks, glazing by exposure
+   retail+office, office, assembly+res, townhouse), storeys, front/side/rear setbacks — **taken from the lot's
+   zoning district schedule when it has them** (a site picked from the map, or a district chosen above), asked
+   only where the schedule has none encoded; a toast says which came from the schedule —, glazing by exposure
    (street 40 %, lane 30 %, neighbour 0 %) or uniform, **upper-storey stepback** (3 m above the 2nd or 4th storey,
    or a 6 m podium/tower), **courtyard** (central or rear light well), **roof** (parapet, elevator/stair penthouse
    which is not a storey under 3.2.1.1, or an amenity room which is), **neighbouring buildings** (west / east /
