@@ -23,7 +23,7 @@ Iterations live on disk, one folder each, so a firm can keep them with the proje
 """
 from __future__ import annotations
 
-import argparse, base64, datetime, json, pathlib, re, shutil, sys, time
+import argparse, base64, datetime, json, os, pathlib, re, shutil, sys, time
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
@@ -42,7 +42,7 @@ except ImportError:                                                             
     rhino_io = None
 
 app = FastAPI(title="Codesheet Massing Studio")
-PROJECTS = ROOT / "projects"
+PROJECTS = pathlib.Path(os.environ.get("CODESHEET_PROJECTS") or ROOT / "projects")   # the env var carries --projects into --reload workers
 
 
 def _slug(s: str) -> str:
@@ -341,6 +341,15 @@ def example_demo():
     }
 
 
+@app.middleware("http")
+async def no_stale_ui(request, call_next):
+    """The UI is plain files on disk; never let the browser cache them, so a normal reload shows the current version."""
+    resp = await call_next(request)
+    if not request.url.path.startswith("/api/"):
+        resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 app.mount("/", StaticFiles(directory=str(ROOT / "app" / "static"), html=True), name="static")
 
 if __name__ == "__main__":
@@ -348,8 +357,14 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--projects", default=str(PROJECTS))
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--reload", action="store_true", help="development: restart by itself whenever app/ or codesheet/ changes")
     a = ap.parse_args()
     PROJECTS = pathlib.Path(a.projects)
     PROJECTS.mkdir(parents=True, exist_ok=True)
-    print(f"Massing Studio → http://127.0.0.1:{a.port}   (iterations saved under {PROJECTS})")
-    uvicorn.run(app, host="127.0.0.1", port=a.port, log_level="warning")
+    print(f"Massing Studio → http://127.0.0.1:{a.port}   (iterations saved under {PROJECTS}{'; auto-reload on' if a.reload else ''})")
+    if a.reload:
+        os.environ["CODESHEET_PROJECTS"] = str(PROJECTS)
+        uvicorn.run("app.server:app", host="127.0.0.1", port=a.port, log_level="warning", reload=True,
+                    reload_dirs=[str(ROOT / "app"), str(ROOT / "codesheet")])
+    else:
+        uvicorn.run(app, host="127.0.0.1", port=a.port, log_level="warning")

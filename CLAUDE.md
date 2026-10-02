@@ -42,7 +42,8 @@ in the printed sheet.
     pip install -r requirements.txt            # fastapi uvicorn pydantic plotly pypdf playwright pytest rhino3dm
     python -m playwright install chromium      # PDF export only
     python -m pytest -q                        # public suite (+ private/ tests when that folder exists)
-    python -m app.server --port 8765           # http://127.0.0.1:8765 ; CODESHEET_FIXTURE=1 for an offline parcel map
+    python -m app.server --port 8765 --reload  # http://127.0.0.1:8765 ; --reload restarts on edits to app/ or codesheet/;
+                                               # CODESHEET_FIXTURE=1 for an offline parcel map. The UI is served no-store, so a plain reload is current.
     PYTHONPATH=. python codesheet/export_engine_data.py   # after changing any table or ladder in Python
     PYTHONPATH=. python app/build_artifact.py             # → out/massing_studio_artifact.html
     PYTHONPATH=. python app/build_pages.py                # → out/site/  (what GitHub Pages serves)
