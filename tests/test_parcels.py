@@ -54,6 +54,7 @@ def test_nearby_reads_live_shaped_records(monkeypatch):
         "lanes": [{"geom": {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[-123.159, 49.26295], [-123.157, 49.26295]]}}}],
     }
     monkeypatch.setattr(parcels, "FIXTURE", False)
+    monkeypatch.setattr(parcels, "_CACHE", {})
     monkeypatch.setattr(parcels, "_ods_page", lambda ds, where, limit, offset: by_ds[ds] if offset == 0 else [])
     out = parcels.nearby(49.2627, -123.158, 120)
     assert out["fixture"] is False
@@ -134,12 +135,15 @@ def test_site_context_reads_live_shaped_records_and_lidar_heights(monkeypatch):
         "building-footprints-2009": [{"hgt_agl": 7.4, "maxht_m": 8.1, "geom": feat("Polygon", [ring(12.5, 2.5, 21.5, 16.5)])}],
         "public-trees": [{"common_name": "CRIMEAN LINDEN", "height_m": 9.1, "diameter_cm": 30, "geom": feat("Point", ll(5, -4))},
                          {"common_name": "RED MAPLE", "height_m": None, "diameter_cm": None, "geo_point_2d": {"lon": ll(15, -4)[0], "lat": ll(15, -4)[1]}}],
+        "property-parcel-polygons": [{"civic_number": "2168", "streetname": "W 11TH AV", "site_id": "P-west",       # names the west neighbour
+                                      "geom": feat("Polygon", [ring(-14, 0, 0, 37)])}],
     }
+    monkeypatch.setattr(parcels, "_CACHE", {})
     monkeypatch.setattr(parcels, "_ods_page", lambda ds, where, limit, offset: by_ds[ds] if offset == 0 else [])
     parcels_near = [{"id": "P-east", "address": "2158 W 11TH AV", "ring": ring(10, 0, 24, 37)}]
     streets = [{"name": "2100 W 11TH AV", "line": [ll(-40, -10), ll(60, -10)]}, {"name": "far away", "line": [ll(500, 500), ll(600, 500)]}]
     ctx = parcels.site_context(frame, lot_poly, parcels_near, streets)
-    assert [c["name"] for c in ctx["context"]] == ["2158 W 11TH AV", "neighbour"]
+    assert [c["name"] for c in ctx["context"]] == ["2158 W 11TH AV", "2168 W 11TH AV"]   # east named by the map's parcel, west by the one fetched around the lot
     east, west = ctx["context"]
     assert east["height_m"] == 7.4 and "2009 LiDAR" in east["source"]
     assert east["footprint"][0] == [32.0, 22.0] or [32.0, 22.0] in east["footprint"]

@@ -29,7 +29,8 @@ parcels are flagged as such in the response.
 """
 from __future__ import annotations
 
-import json, math, os, urllib.parse, urllib.request
+import json, math, os, time, urllib.parse, urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 from codesheet.massing import Lot, LotEdge
@@ -85,35 +86,66 @@ def _first(rec: dict, keys: list[str]):
     return None
 
 
+_CACHE: dict = {}                               # (dataset, rounded lon, lat, radius, limit) → (time, records)
+CACHE_TTL_S = 600
+
+
+def _ods_cached(ds: str, lon: float, lat: float, radius_m: float, limit: int) -> list[dict]:
+    """_ods with a short memory: panning back over the same block does not ask the City again."""
+    key = (ds, round(lon, 4), round(lat, 4), int(radius_m), limit)        # 1e-4° ≈ 8 m
+    hit = _CACHE.get(key)
+    if hit and time.time() - hit[0] < CACHE_TTL_S:
+        return hit[1]
+    recs = _ods(ds, lon, lat, radius_m, limit)
+    if len(_CACHE) > 400:
+        _CACHE.clear()
+    _CACHE[key] = (time.time(), recs)
+    return recs
+
+
+def _parallel(jobs: dict) -> dict:
+    """Run {name: callable} concurrently (the Open Data calls are independent and ~0.5 s each)."""
+    with ThreadPoolExecutor(max_workers=len(jobs)) as ex:
+        futs = {name: ex.submit(fn) for name, fn in jobs.items()}
+        return {name: f.result() for name, f in futs.items()}
+
+
 def nearby(lat: float, lon: float, radius_m: float = 250) -> dict:
     if FIXTURE:
         return _fixture(lat, lon)
     parcels, zoning, streets, lanes = [], [], [], []
-    for rec in _ods(DATASETS["parcels"]["id"], lon, lat, radius_m, 200):
+
+    def lanes_or_none():
+        try:
+            return _ods_cached(DATASETS["lanes"]["id"], lon, lat, radius_m + 60, 200)
+        except Exception:
+            return []                            # lanes dataset optional
+    R = _parallel({"parcels": lambda: _ods_cached(DATASETS["parcels"]["id"], lon, lat, radius_m, 200),
+                   "zoning": lambda: _ods_cached(DATASETS["zoning"]["id"], lon, lat, radius_m + 200, 50),
+                   "streets": lambda: _ods_cached(DATASETS["streets"]["id"], lon, lat, radius_m + 60, 200),
+                   "lanes": lanes_or_none})
+    for rec in R["parcels"]:
         g = _geom(rec)
         if g and g.get("type") in ("Polygon", "MultiPolygon"):
             ring = g["coordinates"][0] if g["type"] == "Polygon" else g["coordinates"][0][0]
             addr = " ".join(str(rec[k]) for k in ("civic_number", "streetname") if rec.get(k)) or _first(rec, DATASETS["parcels"]["addr_fields"])
             parcels.append({"id": str(rec.get("site_id") or rec.get("tax_coord") or len(parcels)), "address": addr, "ring": ring})
-    for rec in _ods(DATASETS["zoning"]["id"], lon, lat, radius_m + 200, 50):
+    for rec in R["zoning"]:
         g = _geom(rec)
         if g and g.get("type") in ("Polygon", "MultiPolygon"):
             rings = [g["coordinates"][0]] if g["type"] == "Polygon" else [p[0] for p in g["coordinates"]]
             zoning.append({"district": _first(rec, DATASETS["zoning"]["fields"]), "rings": rings})
-    for rec in _ods(DATASETS["streets"]["id"], lon, lat, radius_m + 60, 200):
+    for rec in R["streets"]:
         g = _geom(rec)
         if g and g.get("type") in ("LineString", "MultiLineString"):
             lines = [g["coordinates"]] if g["type"] == "LineString" else g["coordinates"]
             for ln in lines:
                 streets.append({"name": _first(rec, DATASETS["streets"]["fields"]) or "street", "line": ln})
-    try:
-        for rec in _ods(DATASETS["lanes"]["id"], lon, lat, radius_m + 60, 200):
-            g = _geom(rec)
-            if g and g.get("type") in ("LineString", "MultiLineString"):
-                for ln in ([g["coordinates"]] if g["type"] == "LineString" else g["coordinates"]):
-                    lanes.append({"line": ln})
-    except Exception:
-        pass                                     # lanes dataset optional
+    for rec in R["lanes"]:
+        g = _geom(rec)
+        if g and g.get("type") in ("LineString", "MultiLineString"):
+            for ln in ([g["coordinates"]] if g["type"] == "LineString" else g["coordinates"]):
+                lanes.append({"line": ln})
     return {"center": [lon, lat], "parcels": parcels, "zoning": zoning, "streets": streets, "lanes": lanes, "fixture": False}
 
 
@@ -296,11 +328,23 @@ def site_context(frame: dict, lot_polygon: list, parcels: list[dict] = (), stree
         fps, trees_ll = _fixture_context(fixture_origin[1], fixture_origin[0])
         lidar = []
     else:
-        fps = [{"ring": r, "height_m": None, "source": "CoV footprint 2015"} for rec in _ods(DATASETS["footprints"]["id"], lon0, lat0, radius_m, 300) for r in _rings(_geom(rec))]
+        R = _parallel({"fp": lambda: _ods_cached(DATASETS["footprints"]["id"], lon0, lat0, radius_m, 300),
+                       "lidar": lambda: _ods_cached(DATASETS["footprints_2009"]["id"], lon0, lat0, radius_m + 10, 300),
+                       "trees": lambda: _ods_cached(DATASETS["trees"]["id"], lon0, lat0, radius_m, 300),
+                       "parcels": lambda: _ods_cached(DATASETS["parcels"]["id"], lon0, lat0, radius_m + 10, 300)})
+        # parcels around the lot itself, so every neighbour can be named (the map's parcels centre on the map, not the lot)
+        extra = []
+        for rec in R["parcels"]:
+            g = _geom(rec)
+            for r in _rings(g):
+                extra.append({"id": str(rec.get("site_id") or rec.get("tax_coord") or ""), "ring": r,
+                              "address": " ".join(str(rec[k]) for k in ("civic_number", "streetname") if rec.get(k)) or None})
+        parcels = list(parcels) + [p for p in extra if p["address"]]
+        fps = [{"ring": r, "height_m": None, "source": "CoV footprint 2015"} for rec in R["fp"] for r in _rings(_geom(rec))]
         hf = DATASETS["footprints_2009"]["height_fields"]
-        lidar = [{"ring": r, "height_m": _first(rec, hf)} for rec in _ods(DATASETS["footprints_2009"]["id"], lon0, lat0, radius_m + 10, 300) for r in _rings(_geom(rec))]
+        lidar = [{"ring": r, "height_m": _first(rec, hf)} for rec in R["lidar"] for r in _rings(_geom(rec))]
         trees_ll = []
-        for rec in _ods(DATASETS["trees"]["id"], lon0, lat0, radius_m, 300):
+        for rec in R["trees"]:
             g = _geom(rec); pt = g.get("coordinates") if g and g.get("type") == "Point" else None
             if pt is None and rec.get("geo_point_2d"):
                 pt = [rec["geo_point_2d"]["lon"], rec["geo_point_2d"]["lat"]]
@@ -347,9 +391,9 @@ def site_context(frame: dict, lot_polygon: list, parcels: list[dict] = (), stree
         x, y = T(t["lonlat"])
         if math.hypot(x - lc[0], y - lc[1]) > radius_m:
             continue
-        h = float(t.get("height_m") or 0) or 8.0
-        trees.append({"x": x, "y": y, "height_m": round(max(2.0, h), 1), "crown_m": _crown_m(float(t.get("diameter_cm") or 20)),
-                      "name": str(t.get("name") or "tree").title()})
+        h = max(2.0, float(t.get("height_m") or 0) or 8.0)
+        crown = min(_crown_m(float(t.get("diameter_cm") or 20)), round(0.9 * h, 1))     # a crown is never taller than the tree
+        trees.append({"x": x, "y": y, "height_m": round(h, 1), "crown_m": max(1.5, crown), "name": str(t.get("name") or "tree").title()})
     # street names: the centrelines the map already fetched, renamed from the hundred-block label
     out_streets = []
     for s in streets:

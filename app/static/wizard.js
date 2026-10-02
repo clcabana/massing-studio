@@ -115,7 +115,8 @@ async function blockWizard(first){
     {id:"glaz", title:"Glazing", help:"Ratios by what each face looks at; the party walls get 0 %. Adjust per edge afterwards.", type:"choice", default:"auto", options:[
       {label:`By exposure — street ${P.glazing_by_exposure.street} %, lane ${P.glazing_by_exposure.lane} %, neighbour ${P.glazing_by_exposure.neighbour} %`, value:"auto"},{label:"Uniform 30 %", value:30},{label:"Uniform 50 %", value:50}]},
     {id:"neigh", title:"Neighbouring buildings (for the 3D view and the Rhino file)", help:"Context only — limiting distance is measured to the property line, not to the neighbour.", type:"multi", default:[], options:[
-      {label:"Left (west) neighbour, 3 storeys", value:"west"},{label:"Right (east) neighbour, 3 storeys", value:"east"},{label:"Across the lane / rear, 2 storeys", value:"north"}], when:()=>first&&!(spec.context||[]).length},   // skipped when the map already brought the real neighbours
+      {label:"Left (west) neighbour, 3 storeys", value:"west"},{label:"Right (east) neighbour, 3 storeys", value:"east"},{label:"Across the lane / rear, 2 storeys", value:"north"}],
+      when:()=>first&&!(spec.context||[]).length&&!/parcel/i.test(spec.lot.source||"")},   // never for a lot picked from the map: its real neighbours came with it (or were cleared on purpose)
     {id:"name", title:"Block name", type:"text", default:String.fromCharCode(65+spec.blocks.length)},
   ]);
   if(!a) return;
@@ -147,25 +148,30 @@ async function blockWizard(first){
 }
 
 // ---------------------------------------------------------------- map picker (Leaflet)
-let map=null, mapLayers=null, mapData=null;
+let map=null, mapLayers=null, mapData=null, moveTimer=null, fetchSeq=0, lastFetch=null;
 function mapPicker(){
   return new Promise(resolve=>{
     const dlg=document.getElementById("dlgMap"); dlg.showModal();
     const status=document.getElementById("mapStatus");
     if(!map){
-      map=L.map("map",{zoomControl:true}).setView([49.263,-123.155],17);
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:20,attribution:"© OpenStreetMap"}).addTo(map);
+      // canvas renderer: a few hundred parcel polygons redraw far cheaper than as SVG nodes
+      map=L.map("map",{zoomControl:true,preferCanvas:true}).setView([49.263,-123.155],17);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:20,attribution:"© OpenStreetMap (basemap only — parcels and context are City of Vancouver Open Data)"}).addTo(map);
       mapLayers=L.layerGroup().addTo(map);
-      map.on("moveend",()=>fetchParcels());
+      // one request per settled view: wait for the pan to stop, ignore answers that arrive out of order,
+      // and don't refetch when the centre barely moved (the last load still covers the view)
+      map.on("moveend",()=>{ clearTimeout(moveTimer); moveTimer=setTimeout(fetchParcels,350); });
     }
-    setTimeout(()=>{ map.invalidateSize(); fetchParcels(); },50);
+    setTimeout(()=>{ map.invalidateSize(); fetchParcels(true); },50);
     document.getElementById("mapGo").onclick=()=>{ const v=document.getElementById("mapLatLon").value.split(/[ ,]+/).map(Number); if(v.length===2&&!v.some(isNaN)) map.setView([v[0],v[1]],18); };
     document.getElementById("mapCancel").onclick=()=>{ dlg.close(); resolve(null); };
-    async function fetchParcels(){
-      if(map.getZoom()<16){ status.textContent="Zoom in to load parcels (zoom ≥ 16)."; mapLayers.clearLayers(); return; }
-      const c=map.getCenter(); status.textContent="loading parcels…";
-      try{ const r=await fetch(`/api/parcels?lat=${c.lat}&lon=${c.lng}&radius=220`); if(!r.ok){ status.textContent=(await r.json()).detail||"request failed"; return; }
-        mapData=await r.json(); mapLayers.clearLayers();
+    async function fetchParcels(force){
+      if(map.getZoom()<16){ status.textContent="Zoom in to load parcels (zoom ≥ 16)."; mapLayers.clearLayers(); lastFetch=null; return; }
+      const c=map.getCenter();
+      if(!force&&lastFetch&&mapData&&map.distance(c,lastFetch)<80){ return; }
+      const seq=++fetchSeq; status.textContent="loading parcels…";
+      try{ const r=await fetch(`/api/parcels?lat=${c.lat}&lon=${c.lng}&radius=220`); if(seq!==fetchSeq) return; if(!r.ok){ status.textContent=(await r.json()).detail||"request failed"; return; }
+        const data=await r.json(); if(seq!==fetchSeq) return; mapData=data; lastFetch=c; mapLayers.clearLayers();
         mapData.streets.forEach(s=>L.polyline(s.line.map(p=>[p[1],p[0]]),{color:"#c8352b",weight:2,opacity:.6}).addTo(mapLayers).bindTooltip(s.name||"street"));
         mapData.lanes.forEach(s=>L.polyline(s.line.map(p=>[p[1],p[0]]),{color:"#b26b00",weight:2,dashArray:"4 4",opacity:.8}).addTo(mapLayers).bindTooltip("lane"));
         mapData.parcels.forEach(p=>{ const poly=L.polygon(p.ring.map(q=>[q[1],q[0]]),{color:"#1d4f9c",weight:1,fillOpacity:.12}).addTo(mapLayers);

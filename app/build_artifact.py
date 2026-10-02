@@ -82,7 +82,7 @@ def build_parts(lib_fallback: str) -> dict:
     # ---- strip the document skeleton; each target adds its own -------------------
     head_css = html[html.index("<style>"):html.index("</style>") + len("</style>")]
     body = html[html.index("<header>"):html.index('<script src="/vendor/leaflet.js">')]
-    scripts = html[html.index("<script>", html.index('<script src="/vendor/three.min.js">')) + len("<script>"):html.index('</script>\n<script src="/wizard.js">')]
+    scripts = html[html.index("<script>", html.index('<script src="/vendor/three.min.js">')) + len("<script>"):html.index('</script>\n<script src="/wizard.js')]
 
     # ---- API: in-page engine instead of the server --------------------------------
     scripts = cut(scripts, "// @@API-START", "// @@API-END", '''// in-page engine (server-less build)
