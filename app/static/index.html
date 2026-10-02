@@ -41,7 +41,7 @@ details.pane>.body{padding:2px 12px 12px} details.pane>.body .card{margin:8px 0;
 .hole{fill:var(--sheet);stroke:var(--blue);stroke-width:1;stroke-dasharray:1.4 .7;cursor:move} .ctx{fill:rgba(128,128,128,.22);stroke:var(--mut);stroke-width:.7;cursor:move} .ctx.sel{stroke:var(--ink);stroke-width:1.2}
 .vtx{fill:var(--sheet);stroke:var(--blue);stroke-width:1.5;cursor:grab} .vtx:hover{fill:var(--blue)} .vtx.h{stroke-dasharray:.8 .5}
 .stName{font:600 2.4px "IBM Plex Sans Condensed",sans-serif;fill:var(--mut);letter-spacing:.2px;text-transform:uppercase;pointer-events:none} .tree{fill:rgba(95,158,90,.26);stroke:#5f9e5a;stroke-width:.2;pointer-events:none} .tree.trunk{fill:#6b4f2a;stroke:none}
-.edgeLbl{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink2);pointer-events:none} .edgeH rect{fill:var(--sheet);stroke:var(--blue);stroke-width:.3} .edgeH text{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink)} .edgeH:hover rect{fill:var(--blue-soft);stroke-width:.5} .edgeH.h rect{stroke-dasharray:.8 .5} .ctxLbl{font:2.2px "IBM Plex Sans",sans-serif;fill:var(--mut);pointer-events:none}
+.edgeLbl{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink2);pointer-events:none} .edgeH rect{fill:var(--sheet);stroke:var(--blue);stroke-width:.3} .edgeH text{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink)} .edgeH:hover rect{fill:var(--blue-soft);stroke-width:.5} .edgeH.h rect{stroke-dasharray:.8 .5} .edgeH.c rect{stroke:var(--mut)} .edgeH.c text{fill:var(--ink2)} .vtx.c{stroke:var(--ink2)} .vtx.c:hover{fill:var(--ink2)} .ctxLbl{font:2.2px "IBM Plex Sans",sans-serif;fill:var(--mut);pointer-events:none}
 .field{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;margin:4px 0} .field label{color:var(--ink2)} .field input,.field select{font:inherit;padding:3px 6px;border:1px solid var(--rule);border-radius:3px;width:120px;text-align:right;background:var(--sheet);color:var(--ink)}
 .field select{text-align:left}
 .storey{display:grid;grid-template-columns:22px 58px 1fr 52px 48px 48px 22px;gap:4px;align-items:center;margin:3px 0} .storey input,.storey select{font:inherit;padding:2px 4px;border:1px solid var(--rule);border-radius:3px;width:100%;background:var(--sheet);color:var(--ink)}
@@ -274,8 +274,15 @@ function drawPlan(){
   }
   // context buildings
   const fewCtx=(spec.context||[]).length<=6;   // a whole block of Open Data footprints is drawn mute; names show on the selected one
+  // a wall's length tag doubles as its push / pull handle: `attrs` says whose wall (block / courtyard / neighbour)
+  const tag=(attrs,cls,ax,ay,bx,by,len)=>{ const mx=(ax+bx)/2,my=(ay+by)/2, ang=Math.atan2(by-ay,bx-ax)*180/Math.PI, rot=(ang>90||ang<-90)?ang+180:ang, w=len.length*1.3+1.8;
+    return `<g class="edgeH${cls?" "+cls:""}" ${attrs} transform="translate(${mx},${my}) rotate(${rot})" style="cursor:${edgeCursor(ang)}"><rect x="${-w/2}" y="-1.4" width="${w}" height="2.8" rx=".6"/><text text-anchor="middle" dominant-baseline="middle">${len}</text></g>`; };
   (spec.context||[]).forEach((c,i)=>{ h+=`<polygon class="ctx ${i===ctxSel?"sel":""}" data-c="${i}" points="${ptsAttr(c.footprint)}"><title>${esc(c.name)} · ${fmt(c.height_m)} m</title></polygon>`; if(fewCtx||i===ctxSel){ const [bx0,by0,bx1,by1]=bbox(c.footprint); const [cx,cy]=toSvg((bx0+bx1)/2,(by0+by1)/2); h+=`<text class="ctxLbl" x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle">${esc(c.name)} · ${fmt(c.height_m)} m</text>`; }
-    if(i===ctxSel) c.footprint.forEach((p,k)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx" data-c="${i}" data-v="${k}" cx="${px}" cy="${py}" r="1.1"/>`; }); });
+    if(i===ctxSel){ // the selected neighbour edits like a block: pull a wall by its tag, double-click an edge for a corner, drag or Alt-click a corner
+      c.footprint.forEach((p,k)=>{ const q=c.footprint[(k+1)%c.footprint.length]; const [ax,ay]=toSvg(p[0],p[1]),[bx,by]=toSvg(q[0],q[1]);
+        h+=`<line class="edgeHit" data-c="${i}" data-e="${k}" x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="transparent" stroke-width="2.5" style="cursor:copy"/>`;
+        h+=tag(`data-c="${i}" data-e="${k}"`,"c",ax,ay,bx,by,Math.hypot(q[0]-p[0],q[1]-p[1]).toFixed(1)); });
+      c.footprint.forEach((p,k)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx c" data-c="${i}" data-v="${k}" cx="${px}" cy="${py}" r="1.1"/>`; }); } });
   // trees and street names (City of Vancouver Open Data when the site came from the map)
   if($("#chkTrees").checked) (spec.trees||[]).forEach(t=>{ const [cx,cy]=toSvg(t.x,t.y); const r=t.crown_m/2*s; if(cx<-r||cx>100+r||cy<-r||cy>100+r) return; h+=`<circle class="tree" cx="${cx}" cy="${cy}" r="${r}"/><circle class="tree trunk" cx="${cx}" cy="${cy}" r="${Math.max(.2,.18*s)}"/>`; });
   if($("#chkStreets").checked) streetLabels().forEach(l=>{ const [ax,ay]=toSvg(l.a[0],l.a[1]),[bx,by]=toSvg(l.b[0],l.b[1]); const [mx,my]=toSvg(l.mid[0],l.mid[1]); if(mx<2||mx>98||my<2||my>98) return; const ang=Math.atan2(by-ay,bx-ax)*180/Math.PI, rot=(ang>90||ang<-90)?ang+180:ang; h+=`<text class="stName" transform="translate(${mx},${my}) rotate(${rot})" text-anchor="middle" dominant-baseline="middle">${esc(l.name)}</text>`; });
@@ -298,9 +305,8 @@ function drawPlan(){
     distinct.forEach(k=>{ h+=`<polygon class="blk ghost" points="${ptsAttr(JSON.parse(k))}"/>`; });
     const tgt = bi===sel ? editTarget() : {pts:b.footprint, holes:b.holes};
     h+=`<polygon class="blk ${bi===sel?"sel":""}" data-b="${bi}" points="${ptsAttr(tgt.pts)}"/>`;
-    // a wall's length tag doubles as its push / pull handle on the selected block (outline and courtyard holes alike)
-    const wallTag=(i,ax,ay,bx,by,len,hi)=>{ const mx=(ax+bx)/2,my=(ay+by)/2, ang=Math.atan2(by-ay,bx-ax)*180/Math.PI, rot=(ang>90||ang<-90)?ang+180:ang, w=len.length*1.3+1.8;
-      return `<g class="edgeH${hi!=null?" h":""}" data-b="${bi}" data-e="${i}"${hi!=null?` data-h="${hi}"`:""} transform="translate(${mx},${my}) rotate(${rot})" style="cursor:${edgeCursor(ang)}"><rect x="${-w/2}" y="-1.4" width="${w}" height="2.8" rx=".6"/><text text-anchor="middle" dominant-baseline="middle">${len}</text></g>`; };
+    // the selected block's walls (outline and courtyard holes alike) carry pull tags
+    const wallTag=(i,ax,ay,bx,by,len,hi)=>tag(`data-b="${bi}" data-e="${i}"${hi!=null?` data-h="${hi}"`:""}`, hi!=null?"h":"", ax,ay,bx,by,len);
     (tgt.holes||[]).forEach((hole,hi)=>{ h+=`<polygon class="hole" data-b="${bi}" data-h="${hi}" points="${ptsAttr(hole)}"/>`; if(bi===sel){
       hole.forEach((p,k)=>{ const q=hole[(k+1)%hole.length]; const [ax,ay]=toSvg(p[0],p[1]),[bx,by]=toSvg(q[0],q[1]); h+=wallTag(k,ax,ay,bx,by,Math.hypot(q[0]-p[0],q[1]-p[1]).toFixed(1),hi); });
       hole.forEach((p,k)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx h" data-b="${bi}" data-h="${hi}" data-v="${k}" cx="${px}" cy="${py}" r="1.0"/>`; }); } });
@@ -318,7 +324,8 @@ function drawPlan(){
 }
 svg.addEventListener("pointerdown",ev=>{
   const t=ev.target; const [x,y]=fromSvg(...clientToSvg(ev));
-  if(t.classList.contains("vtx")&&t.dataset.c!==undefined){ ctxSel=+t.dataset.c; drag={kind:"cvtx",c:+t.dataset.c,v:+t.dataset.v}; svg.setPointerCapture(ev.pointerId); }
+  if(t.classList.contains("vtx")&&t.dataset.c!==undefined){ ctxSel=+t.dataset.c; const fp=spec.context[ctxSel].footprint; if(ev.altKey){ if(fp.length>3){ fp.splice(+t.dataset.v,1); changed(); } return; } drag={kind:"cvtx",c:ctxSel,v:+t.dataset.v}; svg.setPointerCapture(ev.pointerId); }
+  else if(t.closest(".edgeH")&&t.closest(".edgeH").dataset.c!==undefined){ const g=t.closest(".edgeH"); ctxSel=+g.dataset.c; drag={kind:"cedge",c:ctxSel,e:+g.dataset.e,pts0:spec.context[ctxSel].footprint.map(p=>p.slice()),start:[x,y]}; svg.setPointerCapture(ev.pointerId); }
   else if(t.classList.contains("vtx")&&t.dataset.h!==undefined){ const tgt=editTarget(); const hole=tgt.holes[+t.dataset.h]; if(ev.altKey){ if(hole.length>3){ hole.splice(+t.dataset.v,1); changed(); } return; } drag={kind:"hvtx",h:+t.dataset.h,v:+t.dataset.v}; svg.setPointerCapture(ev.pointerId); }
   else if(t.classList.contains("vtx")){ const b=+t.dataset.b, v=+t.dataset.v; sel=b; const tgt=editTarget(); if(ev.altKey){ if(tgt.pts.length>3){ tgt.pts.splice(v,1); changed(); } return; } drag={kind:"vtx",v}; svg.setPointerCapture(ev.pointerId); }
   else if(t.closest(".edgeH")){ const g=t.closest(".edgeH"); sel=+g.dataset.b; ctxSel=null; const tgt=editTarget(); const hi=g.dataset.h!==undefined?+g.dataset.h:null; const pts=hi!=null?tgt.holes[hi]:tgt.pts; drag={kind:"edge",e:+g.dataset.e,h:hi,pts0:pts.map(p=>p.slice()),start:[x,y]}; svg.setPointerCapture(ev.pointerId); }
@@ -342,7 +349,7 @@ svg.addEventListener("pointermove",ev=>{ if(!drag) return; const [x,y]=fromSvg(.
     fp.forEach(p=>{p[0]=snap(p[0]+ddx); p[1]=snap(p[1]+ddy);}); if(drag.kind==="move"&&tgt.owner===spec.blocks[sel]) (tgt.holes||[]).forEach(hh=>hh.forEach(p=>{p[0]=snap(p[0]+ddx); p[1]=snap(p[1]+ddy);})); drag.last=[x,y]; }
   drawPlan(); scheduleAnalyze(); });
 svg.addEventListener("pointerup",()=>{ if(drag){ drag=null; changed(); } });
-svg.addEventListener("dblclick",ev=>{ const t=ev.target; if(t.classList.contains("edgeHit")){ const e=+t.dataset.e; const fp=editTarget().pts; const p=fp[e],q=fp[(e+1)%fp.length]; fp.splice(e+1,0,[snap((p[0]+q[0])/2),snap((p[1]+q[1])/2)]); changed(); } });
+svg.addEventListener("dblclick",ev=>{ const t=ev.target; if(t.classList.contains("edgeHit")){ const e=+t.dataset.e; const fp=t.dataset.c!==undefined?spec.context[+t.dataset.c].footprint:editTarget().pts; const p=fp[e],q=fp[(e+1)%fp.length]; fp.splice(e+1,0,[snap((p[0]+q[0])/2),snap((p[1]+q[1])/2)]); changed(); } });
 
 // ------------------------------------------------------------------ lot & block panels
 function drawLotFields(){
