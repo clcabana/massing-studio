@@ -80,7 +80,7 @@ table.sum{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixe
 table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:top;overflow-wrap:anywhere} table.sum td.blk{width:7%;color:var(--mut);font-size:10px;text-transform:uppercase} table.sum td.val{width:16%} table.sum td.why{width:44%;color:var(--ink2);font-size:11px} table.sum td.ref{width:17%}
 .cite{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--blue);background:var(--blue-soft);padding:0 5px;border-radius:3px;margin:1px 2px 1px 0} sup.fl{color:var(--mark)} ul.fl{margin:0;padding-left:16px;font-size:12px} ul.fl li{margin:2px 0}
 @media print{ body>*:not(#dlgSum){display:none!important} #dlgSum{position:static;border:0;max-height:none;width:auto} .sumhead button{display:none} }
-@media (max-width:900px){ body{height:auto;overflow:auto;display:block} main{display:block} .stage{height:72vh} .side{padding:12px} header{flex-wrap:wrap} header input{min-width:160px;flex:1} #plan{width:260px;height:260px;max-width:calc(100vw - 60px)} .planBox.big #plan{width:min(580px,calc(100vw - 60px));height:min(580px,calc(100vw - 60px))} }
+@media (max-width:900px){ body{height:auto;overflow:auto;display:block} main{display:block} .stage{position:relative;height:72vh} .side{position:static;width:auto;padding:12px;pointer-events:auto} header{flex-wrap:wrap} header input{min-width:160px;flex:1} #plan{width:260px;height:260px;max-width:calc(100vw - 60px)} .planBox.big #plan{width:min(580px,calc(100vw - 60px));height:min(580px,calc(100vw - 60px))} }
 </style></head>
 <body>
 <header>
@@ -519,7 +519,12 @@ function build3d(){
   collectLabels();
   render3d();
 }
-function render3d(){ if(!renderer) return; const L=spec.lot; const w=canvas.clientWidth,h=canvas.clientHeight; if(canvas.width!==w||canvas.height!==h){renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();}
+// the sidebar panes float over the right of the canvas: frame the scene in the part they leave uncovered
+const sideEl=document.querySelector(".side");
+function sideInset(){ return getComputedStyle(sideEl).position==="absolute"?sideEl.offsetWidth+12:0; }
+function render3d(){ if(!renderer) return; const L=spec.lot; const w=canvas.clientWidth,h=canvas.clientHeight; const S=Math.min(sideInset(),w*0.5);
+  if(canvas.width!==w||canvas.height!==h) renderer.setSize(w,h,false);
+  camera.aspect=(w+S)/h; camera.setViewOffset(w+S,h,S,0,w,h); camera.updateProjectionMatrix();
   const lotPts=L.polygon||[[0,0],[L.width_m,0],[L.width_m,L.depth_m],[0,L.depth_m]]; const [lx0,ly0,lx1,ly1]=bbox(lotPts); const span=Math.max(lx1-lx0,ly1-ly0); const R=span*1.6*orbit.r; const c=new THREE.Vector3((lx0+lx1)/2+orbit.pan[0],Math.min(10,span*0.12),-(ly0+ly1)/2+orbit.pan[1]);
   camera.position.set(c.x+R*Math.sin(orbit.ph)*Math.cos(orbit.th), c.y+R*Math.cos(orbit.ph), c.z+R*Math.sin(orbit.ph)*Math.sin(orbit.th)); camera.lookAt(c);
   if(sun){ const az=+$("#sunAz").value*Math.PI/180, alt=+$("#sunAlt").value*Math.PI/180; const D=span*2.5; sun.position.set(c.x+D*Math.cos(alt)*Math.sin(az), D*Math.sin(alt), c.z+D*Math.cos(alt)*Math.cos(az)); sun.target.position.copy(c); sun.shadow.camera.left=sun.shadow.camera.bottom=-span*1.2; sun.shadow.camera.right=sun.shadow.camera.top=span*1.2; sun.shadow.camera.near=1; sun.shadow.camera.far=D*3; sun.shadow.camera.updateProjectionMatrix(); sun.intensity=0.5+0.7*Math.sin(alt); }
