@@ -111,16 +111,21 @@ def test_trees_and_street_names_round_trip(tmp_path):
     d["trees"] = [{"x": -3.0, "y": 5.0, "height_m": 9.0, "crown_m": 6.0, "name": "Crimean Linden"}, {"x": 20.0, "y": -4.0, "height_m": 7.5, "crown_m": 4.2, "name": "Red Maple"}]
     d["streets"] = [{"name": "W 11th Ave", "line": [[-30.0, -10.0], [40.0, -10.0]]}]
     d["context"] = [{"name": "2158 W 11TH AV", "footprint": [[17, 2], [27, 2], [27, 17], [17, 17]], "height_m": 7.4, "source": "CoV footprint 2015 · height 2009 LiDAR"}]
+    d["ground"] = [{"kind": "block", "footprint": [[-60, 0], [60, 0], [60, 80], [-60, 80]], "name": "block", "source": "CoV block-outlines"},
+                   {"kind": "lane", "footprint": [[-60, 37], [60, 37], [60, 43], [-60, 43]], "name": "lane", "width_m": 6.1, "source": "CoV lanes"},
+                   {"kind": "sidewalk", "footprint": [[-30, -1.8], [50, -1.8], [50, 0], [-30, 0]], "name": "W 11th Ave N sidewalk", "width_m": 1.8, "source": "CoV sidewalk-condition-rating · assumed"}]
     spec = MassingSpec(**d)
     p = rhino_io.export_3dm(spec, tmp_path / "ctx.3dm")
     m = rh.File3dm.Read(str(p))
     paths = {m.Layers[i].FullPath for i in range(len(m.Layers))}
-    assert {"Context::Neighbours", "Context::Trees", "Context::Street names"} <= paths
+    assert {"Context::Neighbours", "Context::Trees", "Context::Street names", "Context::Ground::Blocks", "Context::Ground::Lanes", "Context::Ground::Sidewalks"} <= paths
     assert sum(1 for o in m.Objects if o.Attributes.GetUserString("kind") == "tree") == 2
+    assert sum(1 for o in m.Objects if (o.Attributes.GetUserString("kind") or "").startswith("ground_")) == 3
     spec2, warnings = rhino_io.import_3dm(p)
     assert warnings == []
     assert [t.model_dump() for t in spec2.trees] == [t.model_dump() for t in spec.trees]
     assert [s.model_dump() for s in spec2.streets] == [s.model_dump() for s in spec.streets]
+    assert [g.model_dump() for g in spec2.ground] == [g.model_dump() for g in spec.ground]
     assert len(spec2.context) == 1 and spec2.context[0].name == "2158 W 11TH AV" and spec2.context[0].source.endswith("2009 LiDAR")
     assert analyze_massing(spec)["summary"] == analyze_massing(spec2)["summary"]
 

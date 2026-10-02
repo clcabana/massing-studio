@@ -14,6 +14,9 @@ Built in a Claude Cowork session for Claudio (GenEnv, UBC). Continue here.
       spatial.py, table_3231.py   exposing faces, Tables 3.2.3.1-B/-C/-D, Table 3.2.3.7
       separations.py     Table 3.1.3.1 + notes (3),(4); 3.2.2.7 stacked occupancies
       targets.py         occupant load (Table 3.1.17.1), exits/travel/width (3.4.2, 3.4.3), washrooms (3.7.2, VBBL 3.7.2.9)
+      zoning.py          Zoning and Development By-law No. 3575: district table → uses, height, storeys, FSR, coverage, yards,
+                         site minimums, TOA tier; outright / conditional / exceeds. Needs the Lot, so it runs in the massing layer
+                         (analyze_massing → results["zoning"], determinations site.zoning.*); sheet.run_all(zoning=...) adds Section 0
       sheet.py           assembles the A3 code sheet (SheetData → HTML)
       xlsx_sheet.py      the same SheetData as an Excel workbook (openpyxl): Code summary / Determinations / Flags & notes
       massing.py         MassingSpec (lot, blocks, per-storey footprints, holes, roof, context) → BuildingModel; analyze_massing()
@@ -29,6 +32,10 @@ Built in a Claude Cowork session for Claudio (GenEnv, UBC). Continue here.
       parcels.py         City of Vancouver Open Data: parcel → lot, and site_context() → neighbours (2015 footprints,
                          heights from the 2009 LiDAR footprints), public trees, street names — all in the lot's frame
     data/bylaw/vbbl-2025/   articles.json (569 Part 3 articles extracted from the PDF), table_3231_BC.json
+    data/zoning/vancouver/  districts.json: district schedules (R1-1, RT-7/8/10, RM-1, RM-4, C-1, C-2, CD-1 + aliases), TOA tiers,
+                            `unverified` lists per district (→ flags). bylaws.vancouver.ca blocks scripted downloads (403); figures
+                            were checked through search snippets of the June 2026 schedules and secondary summaries, so verify
+                            before trusting a number. The table is exported into engine_data.json and served by /api/zoning.
     data/projects/courtyard_commons.py   SYNTHETIC golden project (3 blocks incl. a 3.2.1.2 parkade); lane_mixed_use.py synthetic
     tests/               hand-worked golden values on the synthetic projects, tables, targets, JS↔Python parity, Rhino round trip, the server-less builds
     private/             NOT in git: a golden project transcribed from a firm's drawing set plus the tests that quote it.
@@ -86,5 +93,11 @@ Massing Studio is published as a Claude artifact: https://claude.ai/artifact/9JH
   Breps (importer handles it); the Download button's copy lands in ~/Downloads, so `/api/rhino/status`
   reports newer same-named copies there and the UI follows them; import waits for the file to settle and
   retries a mid-save read. Still untested: a very large file whose save outlasts the settle window (~3 s).
+- Zoning: yards not encoded for RT-7/8/10, RM-1; C-2 residential rear setbacks and the horizontal angle of daylight,
+  the 6-storey secured-rental height in metres, RM-4's 6-storey social-housing height, and the 2026 C-2A district are
+  not encoded. FSR is gross (no exclusions). Height uses the massing grade, not the zoning base surface. Zoning
+  rounding goes through zoning._r() / engine.js zr() (round half up after a 6-decimal snap) so ties match across engines.
+- tests/test_engine_js.py runs engine.js under node, or in Playwright's Chromium when node is absent (it is on this
+  machine), so the parity suite no longer skips locally.
 - Group A ladder covers A2 only; Table 3.2.2.68 not extracted; BCBC 2024 text parser not built.
 - Egress *layout* (3.3, 3.4.2.3–.4) and washroom accessibility layout (3.8) are out of scope by design.

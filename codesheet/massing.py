@@ -27,7 +27,8 @@ from pydantic import BaseModel, Field
 from codesheet.model import (BuildingModel, Site, Footprint, Point, Storey, Zone, ExteriorFace,
                              OccupancyGroup as O, ExposureType as X)
 from codesheet.determinations import Determination, Bylaw
-from codesheet import height_area, occupancy, articles, spatial, separations, targets
+from codesheet import height_area, occupancy, articles, spatial, separations, targets, zoning
+from codesheet.zoning import ZoningRules
 
 EdgeKind = Literal["street", "lane", "neighbour"]
 
@@ -54,7 +55,8 @@ class Lot(BaseModel):
     grade_m: float = 10.0
     setbacks: Optional[dict[str, float]] = Field(None, description="{'front','side','rear'} metres — drawn as the setback envelope in the plan and the Rhino file")
     address: Optional[str] = None
-    zoning: Optional[str] = None
+    zoning: Optional[str] = Field(None, description="District code, e.g. 'RM-4', 'C-2', 'CD-1 (123)'; looked up in data/zoning/vancouver/districts.json")
+    zoning_rules: Optional[ZoningRules] = Field(None, description="Overrides for the district's limits (a CD-1 by-law, an area plan, a figure the designer checked)")
     source: Optional[str] = Field(None, description="e.g. 'CoV Open Data parcel 012-345-678' or 'described'")
 
     def boundary(self) -> list[tuple[tuple[float, float], tuple[float, float], LotEdge, str]]:
@@ -141,6 +143,17 @@ class StreetName(BaseModel):
     line: list[list[float]] = Field(..., min_length=2)
 
 
+class GroundPatch(BaseModel):
+    """A piece of the public realm around the lot, in lot coordinates, for the 3D view, the plan and the Rhino file only.
+    `block`: a City block outline (the land between rights-of-way; everything outside the blocks is street).
+    `lane`: a lane right-of-way cut back out of its block. `sidewalk`: a sidewalk strip along the property line."""
+    kind: Literal["block", "lane", "sidewalk"]
+    footprint: Polygon
+    name: str = ""
+    width_m: Optional[float] = Field(None, description="lane: right-of-way width; sidewalk: nominal walk width")
+    source: str = ""
+
+
 class MassingSpec(BaseModel):
     project_name: str = "Untitled massing"
     lot: Lot
@@ -148,6 +161,7 @@ class MassingSpec(BaseModel):
     context: list[ContextBuilding] = Field(default_factory=list)
     trees: list[ContextTree] = Field(default_factory=list)
     streets: list[StreetName] = Field(default_factory=list)
+    ground: list[GroundPatch] = Field(default_factory=list, description="block outlines, lanes and sidewalks (City of Vancouver Open Data)")
     sprinklered: bool = True
     streets_faced: Optional[int] = Field(None, description="Override; else counted from lot edges of kind street/lane")
     chosen_articles: dict[str, str] = Field(default_factory=dict)
@@ -377,6 +391,7 @@ def analyze_massing(m: MassingSpec) -> dict:
     sp, bands = spatial.analyze(b, law, groups)
     sd = separations.analyze(b, ad, law)
     td, tg = targets.analyze(b, hd, law)
+    zd, zs = zoning.analyze(m, b, hd)
 
     def ser(d: Determination):
         return {"key": d.key, "label": d.label, "block": d.block, "value": d.value if not isinstance(d.value, list) else list(d.value),
@@ -388,9 +403,10 @@ def analyze_massing(m: MassingSpec) -> dict:
         faces[name] = {"block": rs[0].face.block, "ld": rs[0].face.limiting_distance_m, "exposure": rs[0].face.exposure.value,
                        "bands": [{"label": r.label, "permitted": r.permitted_pct, "actual": r.actual_pct, "ok": r.ok, "z0": round(r.z0, 3), "z1": round(r.z1, 3),
                                   "frr_min": r.frr_min, "cladding": r.cladding, "construction": r.construction} for r in rs]}
-    all_dets = hd + od + ad + sp + sd + td
+    all_dets = hd + od + ad + sp + sd + td + zd
     return {
         "targets": tg,
+        "zoning": zs,
         "building": b.model_dump(mode="json"),
         "determinations": [ser(d) for d in all_dets],
         "headroom": headroom(b, hd, od, ad),

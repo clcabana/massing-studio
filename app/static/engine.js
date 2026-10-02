@@ -3,7 +3,7 @@
 // are shared, not retyped. Kept honest against Python by tests/test_engine_js.py,
 // which runs both on the same specs and compares results.
 //
-// Exposes: analyzeMassing(spec, DATA) → {summary, headroom, faces, determinations, flags, ladder, building}
+// Exposes: analyzeMassing(spec, DATA) → {summary, headroom, faces, zoning, determinations, flags, ladder, building}
 (function (root) {
   const OCC_A_LIKE = new Set(["A1", "A2", "A3", "A4", "B1", "B2", "B3", "C", "D", "F3"]);
 
@@ -377,6 +377,143 @@
     return { dets: out, targets: tg };
   }
 
+  // ------------------------------------------------------------------ zoning (Zoning and Development By-law No. 3575) — mirrors codesheet/zoning.py
+  const Z_SERVICE_RE = SERVICE_RE;
+  const zr = (x, nd) => Math.floor(+x.toFixed(6) * 10 ** nd + 0.5 + 1e-9) / 10 ** nd;   // round half up after a 6-decimal snap — same as zoning.py _r()
+  const r2 = v => zr(v, 2), r1 = v => zr(v, 1);
+  const g_ = v => (typeof v === "number" ? (+v.toPrecision(6)).toString() : String(v));            // Python's :g, near enough
+  const n0 = v => Math.round(v).toLocaleString("en-US");
+  function normalizeCode(code) { if (!code) return null; const c = String(code).replace(/\s*\(.*\)\s*$/, "").trim().toUpperCase(); return c || null; }
+  function tableEntry(Z, code) { const c = normalizeCode(code) || ""; return Z.districts[Z.aliases[c] || c] || null; }
+  function districtRules(Z, code) {
+    const c = normalizeCode(code); if (!c) return [null, []];
+    const notes = []; let key = c;
+    if (!Z.districts[key] && Z.aliases[key]) { const target = Z.aliases[key]; const note = Z.alias_note[key] || Object.entries(Z.alias_note).map(([k, v]) => Z.aliases[k] === target ? v : null).find(Boolean); if (note) notes.push(note); key = target; }
+    const d = Z.districts[key]; if (!d) return [null, [`${c} is not in the district table (encoded: ${Object.keys(Z.districts).join(", ")}). Enter its limits in the Lot panel.`]];
+    const r = { district: c, label: d.label, uses: Object.assign({}, d.uses), height_m: d.height_m, height_m_conditional: d.height_m_conditional, max_storeys: d.max_storeys, max_storeys_conditional: d.max_storeys_conditional,
+      fsr: d.fsr, fsr_conditional: d.fsr_conditional, coverage_pct: d.coverage_pct, front_m: d.front_m, side_m: d.side_m, side_pct: d.side_pct, flank_m: d.flank_m, rear_m: d.rear_m, min_site_m2: d.min_site_m2, min_frontage_m: d.min_frontage_m, toa: null, designer_edited: false, source: d.schedule };
+    return [r, notes];
+  }
+  function resolveZoning(Z, lot) {
+    const given = lot.zoning_rules || null; const code = (given && given.district) || lot.zoning || null;
+    const [table, notes] = districtRules(Z, code); const entry = tableEntry(Z, code) || {};
+    if (!given) return [table, entry, notes];
+    const merged = Object.assign({}, table || {}); for (const [k, v] of Object.entries(given)) if (v !== null && v !== undefined && k !== "uses") merged[k] = v;
+    merged.uses = (given.uses && Object.keys(given.uses).length) ? given.uses : (table ? table.uses : {}); merged.district = normalizeCode(code);
+    if (given.designer_edited) notes.push("Zoning limits were entered by the designer; the district table was not used for those figures.");
+    return [merged, entry, notes];
+  }
+  function lotPoints(lot) { return lot.polygon ? lot.polygon.map(p => [p[0], p[1]]) : [[0, 0], [lot.width_m, 0], [lot.width_m, lot.depth_m], [0, lot.depth_m]]; }
+  function orientation(pts) { let s = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; s += p[0] * q[1] - q[0] * p[1]; } return s >= 0 ? 1 : -1; }
+  function signedInside(p, a, b, orient) { const ux = b[0] - a[0], uy = b[1] - a[1]; const L = Math.hypot(ux, uy) || 1; return orient * ((ux * (p[1] - a[1]) - uy * (p[0] - a[0])) / L); }
+  function edgeRoles(lot) {
+    const segs = lotBoundary(lot); const kinds = segs.map(s => s.kind.kind);
+    let front = kinds[0] === "street" ? 0 : kinds.findIndex(k => k === "street"); if (front < 0) front = 0;
+    const fa = segs[front].a, fb = segs[front].b; const fL = Math.hypot(fb[0] - fa[0], fb[1] - fa[1]) || 1; const fdir = [(fb[0] - fa[0]) / fL, (fb[1] - fa[1]) / fL];
+    let best = null; segs.forEach((s, i) => { if (i === front) return; const L = Math.hypot(s.b[0] - s.a[0], s.b[1] - s.a[1]) || 1; const dot = (s.b[0] - s.a[0]) / L * fdir[0] + (s.b[1] - s.a[1]) / L * fdir[1]; const score = dot - (s.kind.kind === "lane" ? 0.3 : 0); if (best === null || score < best[0]) best = [score, i]; });
+    const rear = best ? best[1] : null;
+    return segs.map((s, i) => ({ a: s.a, b: s.b, kind: s.kind.kind, label: s.label, role: i === front ? "front" : i === rear ? "rear" : ((s.kind.kind === "street" || s.kind.kind === "lane") ? "flank" : "side") }));
+  }
+  function zTier(value, outright, conditional, toa) {
+    const caps = [outright, conditional, toa].filter(c => c !== null && c !== undefined); if (!caps.length) return ["unlimited", null];
+    const cap = Math.max(...caps);
+    if (outright != null && value <= outright + 1e-9) return ["outright", cap];
+    if (conditional != null && value <= conditional + 1e-9) return ["conditional", cap];
+    if (toa != null && value <= toa + 1e-9) return ["toa", cap];
+    return ["exceeds", cap];
+  }
+  const Z_TIER_WORDS = { outright: "within the outright limit", conditional: "above the outright limit but within the conditional maximum (Director of Planning approval)", toa: "above the district's limits but within the Transit-Oriented Area minimum the City may not refuse", exceeds: "EXCEEDS the district maximum — a rezoning or variance", unlimited: "no limit encoded" };
+  function zoning(spec, b, hd, DATA) {
+    const Z = DATA.zoning; const lot = spec.lot; const [rules, entry, notes] = resolveZoning(Z, lot); const H = Object.fromEntries(hd.map(d => [d.key, d]));
+    const zc = (what) => { const sec = (entry.sections || {})[what]; const name = rules && rules.district && rules.district !== "CD-1" ? `${rules.district} District Schedule` : "CD-1 By-law for the site"; return { id: `${name}${sec ? " " + sec : ""}`, page: null, edition: Z.edition }; };
+    const sitePts = lotPoints(lot); const siteArea = r1(polyArea(sitePts)); const out = [];
+    const summary = { district: normalizeCode(rules ? rules.district : lot.zoning), label: rules ? rules.label : null, site_area_m2: siteArea, items: [], yards: [], uses: [], notes: [], status: null, source: rules ? rules.source : null, designer_edited: !!(rules && rules.designer_edited) };
+    if (!rules) {
+      const d = D("site.zoning.district", "Zoning district", lot.zoning || null, { clauses: [{ id: "Zoning District Plan", page: null, edition: Z.edition }],
+        because: !lot.zoning ? "No zoning district is set for this lot. Pick one in the Lot panel (or a site from the map) to check height, FSR, coverage, yards and uses against its schedule." : `District '${lot.zoning}' is not in the table; enter its limits in the Lot panel.`,
+        flags: ["Zoning not checked: no district or limits for this lot."].concat(notes) });
+      out.push(d); summary.status = "unknown"; summary.notes = d.flags; return { dets: out, zoning: summary };
+    }
+    const unverified = entry.unverified || []; const genFlags = notes.slice();
+    for (const f of unverified) genFlags.push(`${rules.district}: the ${f.replace("_m", " (m)").replace("_pct", " (%)").replace(/_/g, " ")} figure is transcribed but not verified against the current schedule — confirm it.`);
+    const toa = rules.toa ? Z.toa.tiers[rules.toa] : null;
+    out.push(D("site.zoning.district", "Zoning district", rules.district, { clauses: [zc("uses")],
+      because: `${rules.label || ""}. Limits from ${rules.source || "the designer"}${rules.designer_edited ? " (designer-edited)" : ""}.` + (toa ? ` TOA tier applied: ${toa.label} — at least ${toa.min_storeys} storeys and FSR ${g_(toa.min_fsr)} may not be refused.` : "") + " " + (entry.notes || []).join(" "), flags: genFlags }));
+    // uses
+    const o2u = Z.occupancy_to_use;
+    for (const blk of b.blocks) {
+      const groups = []; for (const s of b.storeys.filter(s => s.block === blk).sort((x, y) => x.elevation_m - y.elevation_m)) for (const z of s.zones) if (z.occupancy && !groups.includes(z.occupancy)) groups.push(z.occupancy);
+      const parts = [], flags = []; const hasUses = Object.keys(rules.uses || {}).length > 0;
+      for (const g of groups) { const use = o2u[g] || "other"; let tier = hasUses ? (rules.uses[use] || null) : null; if (use === "parking") tier = tier || "outright"; const note = (entry.use_notes || {})[use];
+        if (!hasUses) parts.push(`Group ${g} → ${use}: uses not encoded`);
+        else if (tier) parts.push(`Group ${g} → ${use}: ${tier}` + (note ? ` (${note})` : ""));
+        else { parts.push(`Group ${g} → ${use}: NOT a listed use`); flags.push(`${blk}: Group ${g} (${Z.use_classes[use] || use}) is not a listed use in ${rules.district} — a rezoning, or a different use.`); }
+        if (tier === "conditional" && hasUses) flags.push(`${blk}: ${Z.use_classes[use] || use} is a conditional approval use in ${rules.district} — Director of Planning discretion, design guidelines apply.`); }
+      const notOk = parts.some(p => p.includes("NOT a listed"));
+      summary.uses.push({ block: blk, groups, ok: !notOk, text: parts.join("; ") });
+      out.push(D(`site.zoning.uses.${blk}`, `Permitted uses — ${blk}`, notOk ? "not permitted" : (parts.some(p => p.includes(": conditional")) ? "conditional" : (hasUses ? "outright" : "not encoded")), { block: blk, clauses: [zc("uses")], because: parts.join("; ") + ".", flags }));
+    }
+    const item = (what, value, outright, conditional, unit, key, because, toaCap, extraFlags, clauseKey) => {
+      const [tier, cap] = zTier(value, outright, conditional, toaCap == null ? null : toaCap);
+      const it = { what, value, outright: outright == null ? null : outright, conditional: conditional == null ? null : conditional, toa: toaCap == null ? null : toaCap, cap, unit, status: tier, headroom: cap === null ? null : (unit === "storeys" ? cap - value : r2(cap - value)) };
+      summary.items.push(it);
+      const lim = [outright != null ? `outright ${g_(outright)}` : null, conditional != null ? `conditional ${g_(conditional)}` : null, toaCap != null ? `TOA ${g_(toaCap)}` : null].filter(Boolean).join(" / ");
+      const flags = (extraFlags || []).slice();
+      if (tier === "exceeds") flags.push(`${what} ${g_(value)} ${unit} exceeds the ${rules.district} maximum (${lim}).`);
+      else if (tier === "conditional") flags.push(`${what} ${g_(value)} ${unit} relies on the conditional maximum (${lim}) — Director of Planning approval.`);
+      out.push(D(`site.zoning.${key}`, `Zoning — ${what}`, value, { unit, clauses: [zc(clauseKey || key)], because: `${because} Limit: ${lim || "none encoded"}: ${Z_TIER_WORDS[tier]}.`, inputs: { cap, status: tier }, flags }));
+    };
+    // height
+    const g = lot.grade_m; const hbits = []; let worst = 0, parapetOver = false;
+    for (const blk of spec.blocks) { const roof = b.storeys.find(s => s.block === blk.name && s.is_roof); if (!roof) continue; const hroof = r2(roof.elevation_m - g); const par = (blk.roof || {}).parapet_m != null ? blk.roof.parapet_m : 0.6; const enc = (blk.roof || {}).enclosure; worst = Math.max(worst, hroof);
+      let txt = `${blk.name}: roof ${g_(hroof)} m above grade` + (par ? `, parapet to ${(hroof + par).toFixed(2)} m` : "");
+      if (enc && Z_SERVICE_RE.test(enc.use.toLowerCase())) txt += `, service penthouse to ${(hroof + enc.height_m).toFixed(2)} m (excluded; Section 10.1.1 lets the Director of Planning permit elevator machine rooms and mechanical above the limit)`;
+      hbits.push(txt); const capsH = [rules.height_m, rules.height_m_conditional].filter(c => c != null); const capH = capsH.length ? Math.max(...capsH) : null; if (capH !== null && hroof <= capH + 1e-9 && capH < hroof + par) parapetOver = true; }
+    const hflags = []; if (parapetOver) hflags.push("The parapet rises above the height limit while the roof does not — confirm it is a permitted projection.");
+    if (toa) hflags.push("TOA minimums are set in storeys; the height limit in metres for a Transit-Oriented Area comes from the TOA designation by-law — confirm.");
+    item("height", r2(worst), rules.height_m, rules.height_m_conditional, "m", "height", "Highest roof above grade (massing grade, not the zoning base surface). " + hbits.join("; ") + ".", null, hflags);
+    // storeys
+    const stMax = Math.max(0, ...b.blocks.map(blk => H[`${blk}.building_height_storeys`] ? H[`${blk}.building_height_storeys`].value : 0));
+    if (rules.max_storeys != null || rules.max_storeys_conditional != null || toa) item("storeys", stMax, rules.max_storeys, rules.max_storeys_conditional, "storeys", "storeys", `Tallest block: ${stMax} storeys in building height (Part 3 count; zoning counts storeys from the base surface, so a half-basement may differ).`, toa ? toa.min_storeys : null, [], "height");
+    // FSR
+    let floorArea = 0; const fbits = [], tall = [];
+    for (const blk of b.blocks) { const fs = H[`${blk}.first_storey`]; const st = b.storeys.filter(s => s.block === blk && !s.is_roof).sort((x, y) => x.elevation_m - y.elevation_m); const fsEl = (fs && st.find(s => s.label === fs.value)) ? st.find(s => s.label === fs.value).elevation_m : (st.length ? st[0].elevation_m : g);
+      const above = st.filter(s => s.elevation_m >= fsEl - 0.01); const a = above.reduce((x, s) => x + s.area, 0); floorArea += a; fbits.push(`${blk} ${above.map(s => s.label).join(", ")}: ${n0(a)} m²`);
+      for (const s of above) if (s.height_m > Z.fsr_double_count_f2f_m + 1e-9) tall.push(`${blk} ${s.label} (${g_(s.height_m)} m)`); }
+    floorArea = r1(floorArea); const fsr = siteArea ? r2(floorArea / siteArea) : 0;
+    const fflags = ["Gross floor area from the storey outlines: zoning exclusions (below-grade parking, balconies up to the permitted share, some amenity and stair/elevator areas) are not deducted, so the FSR shown is conservative."];
+    if (tall.length) fflags.push(`Floor-to-floor over ${g_(Z.fsr_double_count_f2f_m)} m may be counted twice in the FSR computation of many schedules: ${tall.join(", ")} — confirm.`);
+    item("floor space ratio", fsr, rules.fsr, rules.fsr_conditional, "FSR", "fsr", `Above-grade floor area ${n0(floorArea)} m² ÷ site area ${n0(siteArea)} m² = ${g_(fsr)}. ` + fbits.join("; ") + ".", toa ? toa.min_fsr : null, fflags);
+    summary.floor_area_m2 = floorArea;
+    // coverage
+    let covArea = 0; const cbits = [];
+    for (const blk of b.blocks) { const st = b.storeys.filter(s => s.block === blk && !s.is_roof); const a = st.length ? Math.max(...st.map(s => s.area)) : 0; covArea += a; cbits.push(`${blk} ${n0(a)} m²`); }
+    const cov = siteArea ? r1(100 * covArea / siteArea) : 0;
+    if (rules.coverage_pct != null) item("site coverage", cov, rules.coverage_pct, null, "%", "coverage", `Largest footprint of each block (${cbits.join("; ")}) = ${n0(covArea)} m² of ${n0(siteArea)} m².`, null, []);
+    summary.coverage_pct = cov;
+    // yards
+    const W = lot.width_m; const sideCands = [rules.side_m, rules.side_pct ? rules.side_pct * W / 100 : null].filter(x => x != null);
+    const req = { front: rules.front_m == null ? null : rules.front_m, rear: rules.rear_m == null ? null : rules.rear_m, side: sideCands.length ? Math.max(...sideCands) : null, flank: rules.flank_m == null ? null : rules.flank_m };
+    if (req.flank === null) req.flank = req.side;
+    const orient = orientation(sitePts); const footprints = []; for (const blk of spec.blocks) for (const st of blk.storeys) footprints.push((st.footprint || blk.footprint).map(p => [p[0], p[1]]));
+    const roles = edgeRoles(lot);
+    for (const e of roles) { const need = req[e.role]; let measured = null; for (const fp of footprints) for (const p of fp) { const d = signedInside(p, e.a, e.b, orient); if (measured === null || d < measured) measured = d; } if (measured === null) continue; measured = r2(measured);
+      const role = { front: "front yard", rear: "rear yard", side: "side yard", flank: "flanking side yard (street side)" }[e.role]; const ok = need === null ? null : measured + 1e-9 >= need;
+      summary.yards.push({ edge: e.label, kind: e.kind, role: e.role, measured_m: measured, required_m: need, ok });
+      const flags = []; if (ok === false) flags.push(`${role} on the ${e.label} (${e.kind}): ${g_(measured)} m provided, ${g_(need)} m required — short by ${(need - measured).toFixed(2)} m.`);
+      if (e.role === "flank" && rules.flank_m == null && need !== null) flags.push(`Corner lot: the ${e.label} side faces a ${e.kind}; the schedule may set a different flanking yard — the side yard ${g_(need)} m was used.`);
+      out.push(D(`site.zoning.yard.${e.label.replace(/ /g, "_")}`, `Zoning — ${role}, ${e.label}`, measured, { unit: "m", clauses: [zc("yards")], because: `Closest storey outline to the ${e.label} lot line (${e.kind}) is ${g_(measured)} m inside it. ` + (need !== null ? `Minimum ${role} ${g_(need)} m: ${ok ? "OK" : "SHORT"}.` : `No minimum ${role} encoded for ${rules.district}.`), inputs: { required_m: need, ok }, flags })); }
+    // site
+    if (rules.min_site_m2 != null || rules.min_frontage_m != null) { const front = roles.find(e => e.role === "front"); const frontage = front ? r2(Math.hypot(front.b[0] - front.a[0], front.b[1] - front.a[1])) : W; const bits = [], flags = [];
+      if (rules.min_site_m2 != null) { bits.push(`site area ${n0(siteArea)} m² vs minimum ${g_(rules.min_site_m2)} m²`); if (siteArea + 1e-9 < rules.min_site_m2) flags.push(`Site area ${n0(siteArea)} m² is below the ${rules.district} minimum of ${g_(rules.min_site_m2)} m² for this form.`); }
+      if (rules.min_frontage_m != null) { bits.push(`frontage ${g_(frontage)} m vs minimum ${g_(rules.min_frontage_m)} m`); if (frontage + 1e-9 < rules.min_frontage_m) flags.push(`Frontage ${g_(frontage)} m is below the ${rules.district} minimum of ${g_(rules.min_frontage_m)} m.`); }
+      out.push(D("site.zoning.site", "Zoning — site area and frontage", flags.length ? "below minimum" : "OK", { clauses: [zc("site")], because: bits.join("; ") + ".", flags })); summary.site = { area_m2: siteArea, frontage_m: frontage, ok: !flags.length }; }
+    const statuses = summary.items.map(i => i.status).concat(summary.yards.filter(y => y.ok === false).map(() => "exceeds"), summary.uses.filter(u => !u.ok).map(() => "exceeds"));
+    summary.status = ["exceeds", "toa", "conditional", "outright", "unlimited"].find(s => statuses.includes(s)) || "outright";
+    summary.notes = (entry.notes || []).concat(notes); summary.flag_count = out.reduce((a, d) => a + d.flags.length, 0);
+    return { dets: out, zoning: summary };
+  }
+
   // ------------------------------------------------------------------ entry point
   function analyzeMassing(spec, DATA) {
     const b = toBuilding(spec);
@@ -385,11 +522,12 @@
     const groups = Object.fromEntries(od.filter(d => d.key.endsWith("major_occupancies")).map(d => [d.block, d.value[0] || "C"]));
     const { dets: sp, faces } = spatial(b, DATA, groups); const sd = separations(b, ad, DATA);
     const { dets: td, targets: tg } = targets(b, hd, DATA);
-    const all = [...hd, ...od, ...ad, ...sp, ...sd, ...td];
+    const { dets: zd, zoning: zs } = zoning(spec, b, hd, DATA);
+    const all = [...hd, ...od, ...ad, ...sp, ...sd, ...td, ...zd];
     const flagSet = new Map(); for (const d of all) for (const f of d.flags) flagSet.set(`${d.block || "site"}|${f}`, [d.block || "site", f]);
     const summary = {}; for (const blk of b.blocks) { const g = k => { const d = all.find(x => x.key === k); return d ? d.value : null; };
       summary[blk] = { storeys: g(`${blk}.building_height_storeys`), area: g(`${blk}.building_area_m2`), height: g(`${blk}.height_to_top_floor_m`), majors: g(`${blk}.major_occupancies`), article: g(`${blk}.article`), construction: g(`${blk}.req.Construction`), floors: g(`${blk}.req.Floor assemblies`) }; }
-    return { building: b, targets: tg, determinations: all, headroom: headroom(b, hd, ad, ladder), faces, flags: [...flagSet.values()].sort((x, y) => (x[0] + x[1]).localeCompare(y[0] + y[1])), summary, ladder: Object.fromEntries(Object.entries(ladder).map(([k, v]) => [k, v.map(e => ({ id: e.rule.id, title: e.rule.title, qualifies: e.qualifies, checks: e.checks, construction: e.rule.construction, floor_frr_h: e.rule.floor_frr_h, roof_frr_h: e.rule.roof_frr_h }))])) };
+    return { building: b, targets: tg, zoning: zs, determinations: all, headroom: headroom(b, hd, ad, ladder), faces, flags: [...flagSet.values()].sort((x, y) => (x[0] + x[1]).localeCompare(y[0] + y[1])), summary, ladder: Object.fromEntries(Object.entries(ladder).map(([k, v]) => [k, v.map(e => ({ id: e.rule.id, title: e.rule.title, qualifies: e.qualifies, checks: e.checks, construction: e.rule.construction, floor_frr_h: e.rule.floor_frr_h, roof_frr_h: e.rule.roof_frr_h }))])) };
   }
-  root.CodesheetEngine = { analyzeMassing, toBuilding, polyArea, edgeExposure, lotBoundary };
+  root.CodesheetEngine = { analyzeMassing, toBuilding, polyArea, edgeExposure, lotBoundary, edgeRoles, districtRules, normalizeCode };
 })(typeof window !== "undefined" ? window : globalThis);

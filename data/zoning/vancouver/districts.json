@@ -1,0 +1,202 @@
+{
+  "bylaw": "Zoning and Development By-law No. 3575, City of Vancouver",
+  "edition": "Z&D By-law 3575 (district schedules consolidated 2026)",
+  "as_of": "2026-10-02",
+  "source_url": "https://bylaws.vancouver.ca/zoning/",
+  "review_note": "Transcribed from the published district schedules and Council reports. Figures listed under `unverified` for a district could not be checked against the current schedule text and are flagged in the analysis. Overlays (Broadway Plan, Villages, Transit-Oriented Areas, heritage, view cones) are not applied unless entered.",
+  "use_classes": {
+    "dwelling": "Dwelling uses (one-family, two-family, multiple dwelling)",
+    "retail": "Retail and neighbourhood grocery",
+    "office": "Office",
+    "service": "Service uses (personal service, restaurant)",
+    "assembly": "Cultural, recreational and institutional (community centre, church, school, hall)",
+    "care": "Care and supportive housing (community care facility, seniors supportive housing)",
+    "parking": "Accessory parking and storage",
+    "industrial": "Manufacturing, wholesale and industrial"
+  },
+  "occupancy_to_use": {"C": "dwelling", "E": "retail", "D": "office", "A1": "assembly", "A2": "assembly", "A3": "assembly", "A4": "assembly", "B1": "care", "B2": "care", "B3": "care", "F1": "industrial", "F2": "parking", "F3": "parking"},
+  "fsr_double_count_f2f_m": 3.7,
+  "toa": {
+    "note": "Provincial Transit-Oriented Areas (Local Government Act Part 14 Div. 7 / Vancouver Charter s. 565.06, Bill 47, in force 30 June 2024): a municipality may not refuse residential development below these minimums within a designated TOA. Distances are from the station entrance or bus exchange.",
+    "tiers": {
+      "station_200": {"label": "≤ 200 m from a rapid-transit station", "min_storeys": 20, "min_fsr": 5.0},
+      "station_400": {"label": "200–400 m from a rapid-transit station", "min_storeys": 12, "min_fsr": 4.0},
+      "station_800": {"label": "400–800 m from a rapid-transit station", "min_storeys": 8, "min_fsr": 3.0},
+      "bus_200": {"label": "≤ 200 m from a bus exchange", "min_storeys": 12, "min_fsr": 4.0},
+      "bus_400": {"label": "200–400 m from a bus exchange", "min_storeys": 8, "min_fsr": 3.0}
+    }
+  },
+  "aliases": {
+    "RS-1": "R1-1", "RS-1A": "R1-1", "RS-1B": "R1-1", "RS-2": "R1-1", "RS-3": "R1-1", "RS-3A": "R1-1", "RS-4": "R1-1", "RS-5": "R1-1", "RS-6": "R1-1", "RS-7": "R1-1",
+    "RM-4N": "RM-4",
+    "C-2B": "C-2", "C-2C": "C-2", "C-2C1": "C-2"
+  },
+  "alias_note": {
+    "RS-1": "The RS districts were replaced by R1-1 (Residential Inclusive) on 17 October 2023; the Open Data layer may still carry the old label.",
+    "RM-4N": "RM-4N shares the RM-4 schedule with a neighbourhood grocery store provision.",
+    "C-2B": "C-2 family: figures taken from the C-2 schedule; confirm the sub-district's own schedule."
+  },
+  "districts": {
+    "R1-1": {
+      "label": "Residential Inclusive",
+      "schedule": "R1-1 District Schedule (June 2026)",
+      "uses": {"dwelling": "outright", "assembly": "conditional", "care": "conditional", "retail": "conditional", "parking": "outright"},
+      "use_notes": {"retail": "neighbourhood grocery store only (corner-store provision); general retail is not a listed use",
+                    "dwelling": "one-family and two-family dwellings, and multiplex up to 6 units (8 where all units are secured rental)"},
+      "height_m": 11.5, "height_m_conditional": null,
+      "max_storeys": 3, "max_storeys_conditional": null,
+      "fsr": 0.7, "fsr_conditional": 1.0,
+      "coverage_pct": 50.0,
+      "front_m": 4.9, "side_m": 1.2, "side_pct": null, "flank_m": null, "rear_m": 10.7,
+      "min_site_m2": 306.0, "min_frontage_m": 10.0,
+      "sections": {"uses": "§2 and §3", "height": "§4.3", "fsr": "§4.7", "coverage": "§4.8", "yards": "§4.4–4.6", "site": "§4.1"},
+      "notes": [
+        "FSR 0.70 for a one-family or two-family dwelling and as the multiplex base; 1.00 for a multiplex where the building is all secured rental, includes a below-market ownership unit, or makes the City amenity contribution.",
+        "Multiplex unit count by site: 3–4 units on ≥ 306 m² and 10.0 m frontage; 5 units on ≥ 464 m² and 13.4 m; 6 units on ≥ 557 m² and 15.1 m; up to 8 units where all are secured rental.",
+        "Site coverage 50 % is the §3.2 house / duplex regulation; the §3.1 multiplex regulations set no coverage limit but cap impermeable surfaces.",
+        "Height 11.5 m and 3 storeys is the multiplex limit; a one-family dwelling or duplex is limited to a lower envelope (confirm §4.3)."
+      ],
+      "unverified": []
+    },
+    "RT-7": {
+      "label": "Two-Family Dwelling (Kitsilano)",
+      "schedule": "RT-7 District Schedule (June 2026)",
+      "uses": {"dwelling": "outright", "assembly": "conditional", "care": "conditional", "parking": "outright"},
+      "use_notes": {},
+      "height_m": 10.7, "height_m_conditional": null,
+      "max_storeys": 3, "max_storeys_conditional": null,
+      "fsr": 0.6, "fsr_conditional": 1.0,
+      "coverage_pct": 45.0,
+      "front_m": null, "side_m": null, "side_pct": null, "flank_m": null, "rear_m": null,
+      "min_site_m2": null, "min_frontage_m": null,
+      "sections": {"uses": "§2 and §3", "height": "§4.3", "fsr": "§4.7", "coverage": "§4.8", "yards": "§4.4–4.6"},
+      "notes": [
+        "FSR 0.60 outright; the June 2024 multiplex amendment lets RT-7 and RT-9 sites use the R1-1 multiplex density (1.0) with the R1-1 unit and site minimums.",
+        "Yards are not encoded for RT-7 (the schedule relates them to the existing streetscape); enter them from §4.4–4.6 in the Lot panel."
+      ],
+      "unverified": ["fsr_conditional"]
+    },
+    "RT-8": {
+      "label": "Two-Family Dwelling (Kitsilano)",
+      "schedule": "RT-8 District Schedule (May 2026)",
+      "uses": {"dwelling": "outright", "assembly": "conditional", "care": "conditional", "parking": "outright"},
+      "use_notes": {},
+      "height_m": 10.7, "height_m_conditional": null,
+      "max_storeys": null, "max_storeys_conditional": null,
+      "fsr": 0.5, "fsr_conditional": 0.75,
+      "coverage_pct": null,
+      "front_m": null, "side_m": null, "side_pct": null, "flank_m": null, "rear_m": null,
+      "min_site_m2": null, "min_frontage_m": null,
+      "sections": {"uses": "§2 and §3", "height": "§4.3", "fsr": "§4.7"},
+      "notes": [
+        "FSR 0.50 outright; the Director of Planning may permit up to 0.75 for single detached house, duplex, infill, multiple conversion dwelling, multiple dwelling and seniors housing.",
+        "At least half the units in a building must have two or more bedrooms."
+      ],
+      "unverified": []
+    },
+    "RT-10": {
+      "label": "Two-Family Dwelling (Riley Park)",
+      "schedule": "RT-10 District Schedule",
+      "uses": {"dwelling": "outright", "assembly": "conditional", "care": "conditional", "parking": "outright"},
+      "use_notes": {},
+      "height_m": null, "height_m_conditional": null,
+      "max_storeys": null, "max_storeys_conditional": null,
+      "fsr": 0.8, "fsr_conditional": null,
+      "coverage_pct": 45.0,
+      "front_m": null, "side_m": null, "side_pct": null, "flank_m": null, "rear_m": null,
+      "min_site_m2": null, "min_frontage_m": null,
+      "sections": {"fsr": "§4.7", "coverage": "§4.8"},
+      "notes": ["Only FSR and site coverage are encoded; enter height and yards from the schedule."],
+      "unverified": []
+    },
+    "RM-1": {
+      "label": "Multiple Dwelling (low density)",
+      "schedule": "RM-1 District Schedule (September 2025)",
+      "uses": {"dwelling": "conditional", "assembly": "conditional", "care": "conditional", "parking": "outright"},
+      "use_notes": {"dwelling": "one-family and two-family dwellings outright; multiple dwelling is a conditional approval use"},
+      "height_m": null, "height_m_conditional": null,
+      "max_storeys": null, "max_storeys_conditional": null,
+      "fsr": 0.4, "fsr_conditional": 0.65,
+      "coverage_pct": null,
+      "front_m": null, "side_m": null, "side_pct": null, "flank_m": null, "rear_m": null,
+      "min_site_m2": null, "min_frontage_m": null,
+      "sections": {"fsr": "§4.7"},
+      "notes": ["FSR 0.40 outright; up to 0.65 with retention of a heritage building. Height and yards not encoded."],
+      "unverified": []
+    },
+    "RM-4": {
+      "label": "Multiple Dwelling (apartment)",
+      "schedule": "RM-4 and RM-4N District Schedule (June 2026)",
+      "uses": {"dwelling": "conditional", "assembly": "conditional", "care": "conditional", "retail": "conditional", "parking": "outright"},
+      "use_notes": {"dwelling": "one-family and two-family dwellings outright; multiple dwelling and mixed-use residential are conditional approval uses",
+                    "retail": "neighbourhood grocery store only"},
+      "height_m": 10.7, "height_m_conditional": null,
+      "max_storeys": null, "max_storeys_conditional": 6,
+      "fsr": 0.75, "fsr_conditional": 1.45,
+      "coverage_pct": null,
+      "front_m": 6.1, "side_m": 2.1, "side_pct": null, "flank_m": null, "rear_m": 10.7,
+      "min_site_m2": 550.0, "min_frontage_m": null,
+      "sections": {"uses": "§2 and §3", "height": "§4.3", "fsr": "§4.7", "yards": "§4.4–4.6", "site": "§4.1"},
+      "notes": [
+        "Height 10.7 m outright. The schedule permits a 6-storey apartment form where the entire residential floor area is social housing; that height figure is not encoded.",
+        "FSR 0.75 outright for one- and two-family dwellings; the Director of Planning may permit up to 1.45 for multiple dwelling, and up to 3.00 where all residential floor area is social housing.",
+        "Minimum site area 550 m² for a multiple dwelling.",
+        "Site coverage is regulated in §4.8 (relates to form and landscaping); not encoded."
+      ],
+      "unverified": ["rear_m"]
+    },
+    "C-1": {
+      "label": "Commercial (local)",
+      "schedule": "C-1 District Schedule (February 2026)",
+      "uses": {"retail": "outright", "office": "outright", "service": "outright", "dwelling": "conditional", "assembly": "conditional", "care": "conditional", "parking": "outright"},
+      "use_notes": {"dwelling": "dwelling units only in conjunction with a commercial use, above or behind it; conditional approval"},
+      "height_m": 9.2, "height_m_conditional": 10.7,
+      "max_storeys": null, "max_storeys_conditional": null,
+      "fsr": 1.2, "fsr_conditional": null,
+      "coverage_pct": null,
+      "front_m": 0.0, "side_m": 0.0, "side_pct": null, "flank_m": null, "rear_m": 10.7,
+      "min_site_m2": null, "min_frontage_m": null,
+      "sections": {"uses": "§2 and §3", "height": "§4.3", "fsr": "§4.7", "yards": "§4.4–4.6"},
+      "notes": [
+        "Height 9.2 m outright; the Director of Planning or Development Permit Board may permit up to 10.7 m considering bulk, overlook and views.",
+        "Rear yard 10.7 m applies where the building contains residential uses; commercial-only buildings may build closer (confirm §4.6)."
+      ],
+      "unverified": ["fsr", "front_m", "side_m"]
+    },
+    "C-2": {
+      "label": "Commercial (arterial mixed-use)",
+      "schedule": "C-2 District Schedule (May 2026)",
+      "uses": {"retail": "outright", "office": "outright", "service": "outright", "dwelling": "conditional", "assembly": "conditional", "care": "conditional", "parking": "outright"},
+      "use_notes": {"dwelling": "dwelling units above the first storey or at the rear of the first storey, in conjunction with commercial uses; conditional approval"},
+      "height_m": 13.8, "height_m_conditional": null,
+      "max_storeys": 4, "max_storeys_conditional": 6,
+      "fsr": 3.0, "fsr_conditional": null,
+      "coverage_pct": null,
+      "front_m": 0.0, "side_m": 0.0, "side_pct": null, "flank_m": null, "rear_m": null,
+      "min_site_m2": null, "min_frontage_m": null,
+      "sections": {"uses": "§2 and §3", "height": "§4.3", "fsr": "§4.7", "yards": "§4.4–4.6"},
+      "notes": [
+        "FSR 3.00 for all uses combined, of which not more than 2.50 may be residential.",
+        "Height 13.8 m (a 4-storey form) outright. The 2025–26 amendments to C-2, C-2B, C-2C and C-2C1 allow secured rental buildings up to 6 storeys (8 near major transit) by development permit, with 20 % of residential floor area below-market; the taller height in metres is not encoded.",
+        "Rear setbacks for residential storeys and the horizontal angle of daylight (§4.6, §4.17) are not encoded: enter the rear yard that applies.",
+        "The C-2A district proposed in 2026 (rental and hotels to 8 storeys) is not encoded."
+      ],
+      "unverified": ["front_m", "side_m"]
+    },
+    "CD-1": {
+      "label": "Comprehensive Development",
+      "schedule": "the site's own CD-1 by-law",
+      "uses": {},
+      "use_notes": {},
+      "height_m": null, "height_m_conditional": null,
+      "max_storeys": null, "max_storeys_conditional": null,
+      "fsr": null, "fsr_conditional": null,
+      "coverage_pct": null,
+      "front_m": null, "side_m": null, "side_pct": null, "flank_m": null, "rear_m": null,
+      "min_site_m2": null, "min_frontage_m": null,
+      "sections": {},
+      "notes": ["CD-1 limits are written for the site in its own by-law (cd1-bylaws.vancouver.ca). Enter height, FSR, coverage, yards and permitted uses in the Lot panel."],
+      "unverified": []
+    }
+  }
+}

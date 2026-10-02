@@ -130,6 +130,9 @@ def export_3dm(spec: MassingSpec, path: str | pathlib.Path) -> pathlib.Path:
         trunk = rh.Extrusion.Create(_polyline([(t.x + 0.18 * math.cos(k * math.pi / 4), t.y + 0.18 * math.sin(k * math.pi / 4)) for k in range(8)]), cz, True)
         m.Objects.AddExtrusion(trunk, _attrs(lay.get("Context::Trees"), t.name or "tree", kind="tree", x=t.x, y=t.y, height_m=t.height_m, crown_m=t.crown_m))
         m.Objects.AddBrep(rh.Brep.CreateFromSphere(rh.Sphere(_P(t.x, t.y, cz), cr)), _attrs(lay.get("Context::Trees"), t.name or "tree", kind="tree_crown"))
+    # public realm: block outlines, lane and sidewalk strips as closed curves at z = 0 (City of Vancouver Open Data)
+    for g in spec.ground:
+        m.Objects.AddCurve(_polyline([tuple(p) for p in g.footprint], 0.0), _attrs(lay.get(f"Context::Ground::{g.kind.capitalize()}s"), g.name or g.kind, kind=f"ground_{g.kind}", width_m=g.width_m, source=g.source or None))
     # street names: a text dot at the middle of each centreline
     for s in spec.streets:
         a, b = s.line[(len(s.line) - 1) // 2], s.line[len(s.line) // 2]
@@ -373,5 +376,5 @@ def import_3dm(path: str | pathlib.Path) -> tuple[MassingSpec, list[str]]:
                        sprinklered=base.sprinklered if base else True, streets_faced=base.streets_faced if base else None,
                        chosen_articles={k: v for k, v in (base.chosen_articles if base else {}).items() if k in {b.name for b in out_blocks}},
                        context=context or (base.context if base else []), trees=trees or (base.trees if base else []),
-                       streets=base.streets if base else [])
+                       streets=base.streets if base else [], ground=base.ground if base else [])
     return spec, warnings

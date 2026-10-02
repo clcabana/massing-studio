@@ -76,6 +76,42 @@ def test_fixture_parcel_to_lot():
     assert lot["zoning"] == "RT-7 (fixture)" and lot["source"].startswith("FIXTURE")
 
 
+def test_row_width_parses_feet_and_metres():
+    assert parcels._row_width_m("66") == pytest.approx(20.12, abs=0.01)
+    assert parcels._row_width_m("20") == pytest.approx(6.1, abs=0.01)
+    assert parcels._row_width_m("11.237m") == pytest.approx(11.24, abs=0.01)
+    assert parcels._row_width_m("18(m)") == 18.0
+    assert parcels._row_width_m(None) is None and parcels._row_width_m("") is None
+
+
+def test_fixture_ground_blocks_lanes_sidewalks():
+    """The public realm around a fixture lot: one block outline containing the lot, the lane cut through it at the
+    right-of-way-widths width, and a sidewalk strip of nominal width outside the block on every face the inventory lists."""
+    data = parcels._fixture(49.2627, -123.158)
+    p = next(x for x in data["parcels"] if x["id"] == "fx-1-2")           # row 1 fronts W 11th: frame unrotated
+    res = parcels.parcel_to_lot(p, data["streets"], data["lanes"], data["zoning"])
+    ctx = parcels.site_context(res["frame"], res["lot"]["polygon"], data["parcels"], data["streets"], lanes=data["lanes"], fixture_origin=p["origin"])
+    G = ctx["ground"]
+    kinds = [g["kind"] for g in G]
+    assert kinds.count("block") == 1 and kinds.count("lane") == 1 and kinds.count("sidewalk") == 3, kinds
+    block = next(g for g in G if g["kind"] == "block")
+    poly = res["lot"]["polygon"]
+    assert all(parcels._point_in_ring(q, block["footprint"]) or parcels._ring_project(q, block["footprint"])[0] < 0.1 for q in poly), "the lot lies in its block"
+    lane = next(g for g in G if g["kind"] == "lane")
+    assert lane["width_m"] == pytest.approx(6.1, abs=0.01) and "right-of-way-widths" in lane["source"]
+    ys = [q[1] for q in lane["footprint"]]
+    assert max(ys) - min(ys) == pytest.approx(6.1, abs=0.05)              # an E–W lane strip, 20 ft wide
+    assert min(ys) > res["lot"]["depth_m"] - 0.1, "the lane runs behind the lot (north of it in this frame)"
+    for w in (g for g in G if g["kind"] == "sidewalk"):
+        assert w["width_m"] == parcels.SIDEWALK_W_M and "assumed" in w["source"] and w["name"].endswith("sidewalk")
+        c = parcels._centroid(w["footprint"])
+        assert not parcels._point_in_ring(c, block["footprint"]), "sidewalks lie in the right-of-way, outside the block"
+        assert parcels._ring_project(c, block["footprint"])[0] == pytest.approx(parcels.SIDEWALK_W_M / 2, abs=0.15), "against the property line"
+    front = next(g for g in G if g["kind"] == "sidewalk" and "11th" in g["name"])
+    assert all(-parcels.SIDEWALK_W_M - 0.1 < q[1] < 0.1 for q in front["footprint"]), "the front sidewalk hugs the lot's street edge (y = 0)"
+    assert "block-outlines" in ctx["context_source"] or ctx["context_source"].startswith("FIXTURE")
+
+
 def test_street_label_from_hundred_block():
     assert parcels.street_label("2200 W 10TH AV") == "W 10th Ave"
     assert parcels.street_label("KING EDWARD AV") == "King Edward Ave"
@@ -137,12 +173,28 @@ def test_site_context_reads_live_shaped_records_and_lidar_heights(monkeypatch):
                          {"common_name": "RED MAPLE", "height_m": None, "diameter_cm": None, "geo_point_2d": {"lon": ll(15, -4)[0], "lat": ll(15, -4)[1]}}],
         "property-parcel-polygons": [{"civic_number": "2168", "streetname": "W 11TH AV", "site_id": "P-west",       # names the west neighbour
                                       "geom": feat("Polygon", [ring(-14, 0, 0, 37)])}],
+        # public realm: the block (both rows of lots and the lane between them), a ROW-width point on the lane, the sidewalk
+        # on the north side of W 11th drawn the City's way (a schematic line 5 m off the centreline at y = -10)
+        "block-outlines": [{"geom": feat("Polygon", [ring(-60, 0, 60, 80)])}],
+        "right-of-way-widths": [{"width": "20", "geom": feat("Point", ll(5, 40))}],
+        "sidewalk-condition-rating": [{"hundred_block": "2100 W 11TH AV N", "sidewalk_condition_index_rating": "Good",
+                                       "geom": feat("MultiLineString", [[ll(-30, -5), ll(50, -5)]])}],
     }
     monkeypatch.setattr(parcels, "_CACHE", {})
     monkeypatch.setattr(parcels, "_ods_page", lambda ds, where, limit, offset: by_ds[ds] if offset == 0 else [])
     parcels_near = [{"id": "P-east", "address": "2158 W 11TH AV", "ring": ring(10, 0, 24, 37)}]
     streets = [{"name": "2100 W 11TH AV", "line": [ll(-40, -10), ll(60, -10)]}, {"name": "far away", "line": [ll(500, 500), ll(600, 500)]}]
-    ctx = parcels.site_context(frame, lot_poly, parcels_near, streets)
+    lanes = [{"line": [ll(-60, 40), ll(60, 40)]}]
+    ctx = parcels.site_context(frame, lot_poly, parcels_near, streets, lanes=lanes)
+    G = {g["kind"]: g for g in ctx["ground"]}
+    assert set(G) == {"block", "lane", "sidewalk"}
+    assert parcels._point_in_ring([25, 40], G["block"]["footprint"]) and "block-outlines" in G["block"]["source"]
+    lane_y = sorted({round(q[1], 1) for q in G["lane"]["footprint"]})
+    assert lane_y == [pytest.approx(60 - 3.05, abs=0.05), pytest.approx(60 + 3.05, abs=0.05)]   # lot y = proj y + 20; 20 ft either side of the centreline
+    walk_y = sorted({round(q[1], 1) for q in G["sidewalk"]["footprint"]})
+    assert walk_y == [pytest.approx(20 - 1.8, abs=0.05), pytest.approx(20.0, abs=0.05)]           # against the block's property line, in the ROW
+    assert G["sidewalk"]["name"] == "W 11th Ave N sidewalk" and "assumed" in G["sidewalk"]["source"]
+    assert "sidewalk-condition-rating" in ctx["context_source"] and "incomplete" not in ctx["context_source"]
     assert [c["name"] for c in ctx["context"]] == ["2158 W 11TH AV", "2168 W 11TH AV"]   # east named by the map's parcel, west by the one fetched around the lot
     east, west = ctx["context"]
     assert east["height_m"] == 7.4 and "2009 LiDAR" in east["source"]
@@ -153,3 +205,19 @@ def test_site_context_reads_live_shaped_records_and_lidar_heights(monkeypatch):
     assert ctx["trees"][1]["height_m"] == 8.0 and ctx["trees"][0]["x"] == pytest.approx(25.0, abs=0.05)
     assert [s["name"] for s in ctx["streets"]] == ["W 11th Ave"] and ctx["streets"][0]["line"][0][1] == pytest.approx(10.0, abs=0.05)
     assert "building-footprints-2015" in ctx["context_source"]
+
+
+def test_site_context_survives_a_public_realm_outage(monkeypatch):
+    """The ground datasets are decoration: when they fail the neighbours still come back, with a note."""
+    lon0, lat0 = -123.158, 49.2627
+    frame = {"lon0": lon0, "lat0": lat0, "ang_deg": 0.0, "dx": -20.0, "dy": -20.0}
+
+    def page(ds, where, limit, offset):
+        if ds in ("block-outlines", "right-of-way-widths", "sidewalk-condition-rating"):
+            raise OSError("503 from the City")
+        return []
+    monkeypatch.setattr(parcels, "_CACHE", {})
+    monkeypatch.setattr(parcels, "_ods_page", page)
+    ctx = parcels.site_context(frame, [[20, 20], [30, 20], [30, 57], [20, 57]], [], [])
+    assert ctx["ground"] == [] and ctx["context"] == []
+    assert "public realm incomplete" in ctx["context_source"] and "block-outlines" in ctx["context_source"]

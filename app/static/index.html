@@ -2,64 +2,70 @@
 <html lang="en"><head><meta charset="utf-8"><title>Massing Studio</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="/vendor/leaflet.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-:root{--paper:#f3f4f6;--sheet:#fff;--ink:#1e2126;--ink2:#4b5563;--mut:#7a8291;--rule:#e1e4e8;--mark:#c8352b;--mark-soft:#fbe9e7;--ok:#1d7a46;--ok-soft:#e3f3e9;--blue:#1d4f9c;--blue-soft:#e3eefc;--warn:#b26b00;--warn-soft:#fff3d6;--grid:#e4e7eb;--sky:#e9ebee;--sheet-a:rgba(255,255,255,.88);--float:0 1px 2px rgba(20,25,35,.05),0 10px 30px -14px rgba(20,25,35,.22)}
-:root[data-theme="dark"]{--paper:#12151a;--sheet:#1a1e25;--ink:#e6e8eb;--ink2:#b6bcc7;--mut:#8b93a1;--rule:#2b313b;--mark:#f0786d;--mark-soft:#3a2321;--ok:#5ec98a;--ok-soft:#1d3327;--blue:#8fb4f0;--blue-soft:#1f2f4a;--warn:#e0a437;--warn-soft:#3a2f14;--grid:#232830;--sky:#14171b;--sheet-a:rgba(26,30,37,.88);--float:0 1px 2px rgba(0,0,0,.35),0 10px 30px -14px rgba(0,0,0,.7)}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--paper:#12151a;--sheet:#1a1e25;--ink:#e6e8eb;--ink2:#b6bcc7;--mut:#8b93a1;--rule:#2b313b;--mark:#f0786d;--mark-soft:#3a2321;--ok:#5ec98a;--ok-soft:#1d3327;--blue:#8fb4f0;--blue-soft:#1f2f4a;--warn:#e0a437;--warn-soft:#3a2f14;--grid:#232830;--sky:#14171b;--sheet-a:rgba(26,30,37,.88);--float:0 1px 2px rgba(0,0,0,.35),0 10px 30px -14px rgba(0,0,0,.7)} }
+/* palette: soft, matte. No pure white or black; the accents (red, blue, green, amber) are desaturated so nothing glares. */
+:root{--paper:#f1f2f4;--sheet:#fbfbfc;--ink:#2b3036;--ink2:#5a6270;--mut:#848b96;--rule:#e0e3e7;--mark:#c0564d;--mark-soft:#f6e7e5;--ok:#3f8a5f;--ok-soft:#e4f0e8;--blue:#4c6fa3;--blue-soft:#e6edf6;--warn:#b7853f;--warn-soft:#f7efdf;--grid:#e3e6ea;--sky:#e8eaed;--sheet-a:rgba(251,251,252,.88);--float:0 1px 2px rgba(20,25,35,.05),0 10px 30px -14px rgba(20,25,35,.2)}
+:root[data-theme="dark"]{--paper:#13161b;--sheet:#1b1f26;--ink:#dde0e5;--ink2:#aab1bc;--mut:#858d9a;--rule:#2b313a;--mark:#dc8a82;--mark-soft:#372523;--ok:#79bb94;--ok-soft:#1e3127;--blue:#97b1dc;--blue-soft:#222e42;--warn:#d1a86a;--warn-soft:#362d1a;--grid:#232830;--sky:#15181c;--sheet-a:rgba(27,31,38,.88);--float:0 1px 2px rgba(0,0,0,.35),0 10px 30px -14px rgba(0,0,0,.7)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--paper:#13161b;--sheet:#1b1f26;--ink:#dde0e5;--ink2:#aab1bc;--mut:#858d9a;--rule:#2b313a;--mark:#dc8a82;--mark-soft:#372523;--ok:#79bb94;--ok-soft:#1e3127;--blue:#97b1dc;--blue-soft:#222e42;--warn:#d1a86a;--warn-soft:#362d1a;--grid:#232830;--sky:#15181c;--sheet-a:rgba(27,31,38,.88);--float:0 1px 2px rgba(0,0,0,.35),0 10px 30px -14px rgba(0,0,0,.7)} }
 *{box-sizing:border-box} html,body{height:100%;margin:0}
 /* one continuous grey ground: the header, the 3D view and the sidebar share it; everything else floats on it */
-body{background:var(--sky);color:var(--ink);font:13px/1.4 "IBM Plex Sans",system-ui,sans-serif;display:grid;grid-template-rows:auto 1fr;height:100vh;overflow:hidden;transition:background .25s,color .25s}
+/* type: Inter Light (a Helvetica Neue Light stand-in that is free to load) for everything but the logo; weights stay within 300–400 */
+:root{--sans:Inter,"Helvetica Neue",Helvetica,Arial,sans-serif}
+b,strong{font-weight:500}
+body{background:var(--sky);color:var(--ink);font:300 13px/1.4 var(--sans);display:grid;grid-template-rows:auto 1fr;height:100vh;overflow:hidden;transition:background .25s,color .25s}
 .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
 header{display:flex;align-items:center;gap:12px;padding:14px 18px 10px;background:transparent}
-header h1{font:500 24px/.92 "Helvetica Neue",Helvetica,Arial,sans-serif;margin:0;letter-spacing:-.025em;white-space:nowrap} header h1 small{font:500 9.5px/1 "IBM Plex Mono",monospace;color:var(--mut);margin-left:10px;letter-spacing:.06em;vertical-align:1px} header .sp{flex:1}
+header h1{font:500 48px/.92 "Helvetica Neue",Helvetica,Arial,sans-serif;margin:0;letter-spacing:-.025em;white-space:nowrap} header .sp{flex:1}
 header input{font:inherit;padding:5px 10px;border:1px solid transparent;border-radius:4px;min-width:220px;background:var(--sheet-a);color:var(--ink);box-shadow:var(--float)} header input:focus{outline:0;border-color:var(--rule)}
-button{font:inherit;padding:5px 10px;border:1px solid var(--ink);background:var(--sheet);color:var(--ink);border-radius:4px;cursor:pointer;transition:background .15s} button:hover{background:var(--paper)} button.pri{background:var(--ink);color:var(--sheet)} button.pri:hover{opacity:.9} button.sm{padding:2px 7px;font-size:12px} button:disabled{opacity:.4;cursor:default} button.ghost{border-color:transparent;background:transparent;color:var(--ink2)} button.ghost:hover{background:var(--sheet-a)}
+button{font:inherit;padding:5px 10px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);border-radius:4px;cursor:pointer;transition:background .15s,border-color .15s} button:hover{background:var(--paper);border-color:var(--mut)} button.pri{background:var(--ink);border-color:var(--ink);color:var(--sheet)} button.pri:hover{opacity:.9} button.sm{padding:2px 7px;font-size:12px} button:disabled{opacity:.4;cursor:default} button.ghost{border-color:transparent;background:transparent;color:var(--ink2)} button.ghost:hover{background:var(--sheet-a)}
 header>button{border-color:transparent;background:var(--sheet-a);box-shadow:var(--float)} header>button:hover{background:var(--sheet)} header>button.ghost{box-shadow:none;background:transparent} header>button.pri{background:var(--ink);color:var(--sheet)}
 main{position:relative;min-height:0}
 /* the stage is the whole screen below the header; the plan editor, the view controls and the sidebar panes all float over it */
 .stage{position:absolute;inset:0;background:var(--sky);overflow:hidden}
 #three{position:absolute;inset:0;width:100%;height:100%;display:block;background:var(--sky);cursor:grab} #three:active{cursor:grabbing}
 #labels3d{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.lbl3d{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:500 11px "IBM Plex Sans",sans-serif;color:var(--ink);background:var(--sheet-a);border-radius:999px;padding:1px 8px 1px 6px;box-shadow:0 1px 4px rgba(0,0,0,.08)} .lbl3d i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px}
-.lbl3d.street{font:600 10px "IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;letter-spacing:.12em;color:var(--ink2);border-radius:2px;padding:1px 6px;box-shadow:none}
+.lbl3d{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:400 11px var(--sans);color:var(--ink);background:var(--sheet-a);border-radius:999px;padding:1px 8px 1px 6px;box-shadow:0 1px 4px rgba(0,0,0,.08)} .lbl3d i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.lbl3d.street{font:400 10px var(--sans);text-transform:uppercase;letter-spacing:.12em;color:var(--ink2);border-radius:2px;padding:1px 6px;box-shadow:none}
 .ovl{position:absolute;background:var(--sheet-a);border-radius:6px;box-shadow:var(--float);backdrop-filter:blur(6px)}
-.planBox{left:12px;bottom:12px;padding:6px 8px 8px} .planBox .bar{display:flex;align-items:center;gap:8px;font:600 11px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:5px;min-width:200px} .planBox .bar .sp{flex:1} .planBox .bar button{padding:0 5px;line-height:16px}
+.planBox{left:12px;bottom:12px;padding:6px 8px 8px} .planBox .bar{display:flex;align-items:center;gap:8px;font:400 11px var(--sans);text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:5px;min-width:200px} .planBox .bar .sp{flex:1} .planBox .bar button{padding:0 5px;line-height:16px}
 #plan{width:340px;height:340px;max-width:calc(100vw - 400px);max-height:calc(100vh - 170px);display:block;background:var(--sheet);border:1px solid var(--rule);touch-action:none;user-select:none}
 .planBox.big #plan{width:580px;height:580px} .planBox.min #plan,.planBox.min .planHelp,.planBox.min .legend{display:none}
 .planHelp{max-width:340px} .planBox.big .planHelp{max-width:580px} .planHelp summary{cursor:pointer;color:var(--mut);font-size:11px;margin-top:5px;list-style:none} .planHelp summary::-webkit-details-marker{display:none} .planHelp summary:before{content:"▸ "} .planHelp[open] summary:before{content:"▾ "} .planHelp .hint{margin-top:3px}
-.viewBox{left:12px;top:12px;padding:0;font-size:11.5px;color:var(--ink2);min-width:0} .viewBox summary{cursor:pointer;list-style:none;padding:5px 10px;font:600 11px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)} .viewBox summary::-webkit-details-marker{display:none} .viewBox summary:before{content:"▸ "} .viewBox[open] summary:before{content:"▾ "} .viewBox .vb{padding:0 10px 8px;width:260px} .viewBox .vb label.status{display:block;margin:3px 0}
+.viewBox{left:12px;top:12px;padding:0;font-size:11.5px;color:var(--ink2);min-width:0} .viewBox summary{cursor:pointer;list-style:none;padding:5px 10px;font:400 11px var(--sans);text-transform:uppercase;letter-spacing:.08em;color:var(--mut)} .viewBox summary::-webkit-details-marker{display:none} .viewBox summary:before{content:"▸ "} .viewBox[open] summary:before{content:"▾ "} .viewBox .vb{padding:0 10px 8px;width:260px} .viewBox .vb label.status{display:block;margin:3px 0}
 .sun{display:grid;grid-template-columns:auto 1fr auto 1fr auto;gap:6px 8px;align-items:center;font-size:11.5px;color:var(--ink2);margin-top:6px} .sun input[type=range]{width:100%}
 /* the sidebar: a column of dropdown panes floating over the right of the 3D view. The column itself is
    transparent to the pointer (orbit and zoom work in the gaps between panes); only the panes catch events. */
 .side{position:absolute;top:12px;right:12px;bottom:0;width:340px;overflow:auto;background:transparent;padding:0 0 12px;pointer-events:none;scrollbar-width:none} .side::-webkit-scrollbar{display:none}
 details.pane{pointer-events:auto;background:var(--sheet-a);border-radius:6px;box-shadow:var(--float);backdrop-filter:blur(6px);margin:0 0 8px}
-details.pane>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:9px 12px;font:600 11.5px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);user-select:none;border-radius:6px} details.pane>summary::-webkit-details-marker{display:none}
-details.pane>summary:before{content:"▸";font-size:10px;width:10px;color:var(--mut);transition:transform .15s} details.pane[open]>summary:before{transform:rotate(90deg)} details.pane>summary .sp{flex:1} details.pane>summary:hover{color:var(--ink2)} details.pane>summary .acts{display:flex;gap:4px;text-transform:none;letter-spacing:0} details.pane>summary .status{text-transform:none;letter-spacing:0;font-weight:400}
+details.pane>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:9px 12px;font:400 11.5px var(--sans);text-transform:uppercase;letter-spacing:.08em;color:var(--mut);user-select:none;border-radius:6px} details.pane>summary::-webkit-details-marker{display:none}
+details.pane>summary:before{content:"▸";font-size:10px;width:10px;color:var(--mut);transition:transform .15s} details.pane[open]>summary:before{transform:rotate(90deg)} details.pane>summary .sp{flex:1} details.pane>summary:hover{color:var(--ink2)} details.pane>summary .acts{display:flex;gap:4px;text-transform:none;letter-spacing:0} details.pane>summary .status{text-transform:none;letter-spacing:0;font-weight:300}
 details.pane>.body{padding:2px 12px 12px} details.pane>.body .card{margin:8px 0;background:var(--sheet);border-color:var(--rule)}
 .lotEdge{cursor:pointer} .lotEdge text{font:2.3px "IBM Plex Mono",monospace;fill:var(--ink2)} .lotEdge rect{fill:var(--sheet);stroke:var(--rule)}
-.lotSeg{stroke-width:.9} .lotSeg.street{stroke:#c8352b} .lotSeg.lane{stroke:#b26b00;stroke-dasharray:1.2 .6} .lotSeg.neighbour{stroke:var(--ink);stroke-dasharray:1.6 .8}
-.blk{fill:rgba(42,120,214,.16);stroke:var(--blue);stroke-width:1.2;cursor:move} .blk.sel{fill:rgba(42,120,214,.28);stroke-width:2} .blk.ghost{fill:none;stroke:var(--blue);stroke-width:.5;stroke-dasharray:1 .8;pointer-events:none;opacity:.7}
+.lotSeg{stroke-width:.9} .lotSeg.street{stroke:var(--mark)} .lotSeg.lane{stroke:var(--warn);stroke-dasharray:1.2 .6} .lotSeg.neighbour{stroke:var(--ink2);stroke-dasharray:1.6 .8}
+.cityBlock{fill:var(--paper);stroke:var(--rule);stroke-width:.3;pointer-events:none} .laneCut{fill:var(--sheet);pointer-events:none} .walk{fill:var(--rule);opacity:.75;pointer-events:none}
+.blk{fill:rgba(76,111,163,.14);stroke:var(--blue);stroke-width:1.2;cursor:move} .blk.sel{fill:rgba(76,111,163,.26);stroke-width:2} .blk.ghost{fill:none;stroke:var(--blue);stroke-width:.5;stroke-dasharray:1 .8;pointer-events:none;opacity:.7}
 .hole{fill:var(--sheet);stroke:var(--blue);stroke-width:1;stroke-dasharray:1.4 .7;cursor:move} .ctx{fill:rgba(128,128,128,.22);stroke:var(--mut);stroke-width:.7;cursor:move} .ctx.sel{stroke:var(--ink);stroke-width:1.2}
 .vtx{fill:var(--sheet);stroke:var(--blue);stroke-width:1.5;cursor:grab} .vtx:hover{fill:var(--blue)} .vtx.h{stroke-dasharray:.8 .5}
-.stName{font:600 2.4px "IBM Plex Sans Condensed",sans-serif;fill:var(--mut);letter-spacing:.2px;text-transform:uppercase;pointer-events:none} .tree{fill:rgba(95,158,90,.26);stroke:#5f9e5a;stroke-width:.2;pointer-events:none} .tree.trunk{fill:#6b4f2a;stroke:none}
-.edgeLbl{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink2);pointer-events:none} .edgeH rect{fill:var(--sheet);stroke:var(--blue);stroke-width:.3} .edgeH text{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink)} .edgeH:hover rect{fill:var(--blue-soft);stroke-width:.5} .edgeH.h rect{stroke-dasharray:.8 .5} .edgeH.c rect{stroke:var(--mut)} .edgeH.c text{fill:var(--ink2)} .vtx.c{stroke:var(--ink2)} .vtx.c:hover{fill:var(--ink2)} .ctxLbl{font:2.2px "IBM Plex Sans",sans-serif;fill:var(--mut);pointer-events:none}
+.stName{font:400 2.4px var(--sans);fill:var(--mut);letter-spacing:.2px;text-transform:uppercase;pointer-events:none} .tree{fill:rgba(125,163,122,.24);stroke:#7da37a;stroke-width:.2;pointer-events:none} .tree.trunk{fill:#7a6248;stroke:none}
+.edgeLbl{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink2);pointer-events:none} .edgeH rect{fill:var(--sheet);stroke:var(--blue);stroke-width:.3} .edgeH text{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink)} .edgeH:hover rect{fill:var(--blue-soft);stroke-width:.5} .edgeH.h rect{stroke-dasharray:.8 .5} .edgeH.c rect{stroke:var(--mut)} .edgeH.c text{fill:var(--ink2)} .vtx.c{stroke:var(--ink2)} .vtx.c:hover{fill:var(--ink2)} .ctxLbl{font:300 2.2px var(--sans);fill:var(--mut);pointer-events:none}
 .field{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;margin:4px 0} .field label{color:var(--ink2)} .field input,.field select{font:inherit;padding:3px 6px;border:1px solid var(--rule);border-radius:3px;width:120px;text-align:right;background:var(--sheet);color:var(--ink)}
 .field select{text-align:left}
 .storey{display:grid;grid-template-columns:22px 58px 1fr 52px 48px 48px 22px;gap:4px;align-items:center;margin:3px 0} .storey input,.storey select{font:inherit;padding:2px 4px;border:1px solid var(--rule);border-radius:3px;width:100%;background:var(--sheet);color:var(--ink)}
-.storey .n{color:var(--mut);font-size:11px;cursor:pointer} .storey.edit .n{color:var(--blue);font-weight:600} .storey .x{border:0;background:none;color:var(--mut);cursor:pointer;padding:0} .storey.own .n:after{content:"◧";margin-left:2px;font-size:9px}
-.sub-h{margin-top:10px;display:flex;align-items:center;gap:8px;font-weight:600;font-size:12px} .sub-h .sp{flex:1}
+.storey .n{color:var(--mut);font-size:11px;cursor:pointer} .storey.edit .n{color:var(--blue);font-weight:400} .storey .x{border:0;background:none;color:var(--mut);cursor:pointer;padding:0} .storey.own .n:after{content:"◧";margin-left:2px;font-size:9px}
+.sub-h{margin-top:10px;display:flex;align-items:center;gap:8px;font-weight:400;font-size:12px} .sub-h .sp{flex:1}
 .card{background:var(--sheet);border:1px solid var(--rule);padding:10px 12px;margin:10px 12px;border-radius:4px}
-.card h3{margin:0 0 6px;font:600 14px "IBM Plex Sans Condensed",sans-serif;display:flex;gap:8px;align-items:baseline} .card h3 .art{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--blue)} .card h3 .sp{flex:1}
-.tg{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px} .tg th{font-weight:500;color:var(--mut);text-align:left;padding:2px 4px;border-bottom:1px solid var(--rule)} .tg td{padding:2px 4px;border-bottom:1px solid var(--rule);vertical-align:top}
+.card h3{margin:0 0 6px;font:400 14px var(--sans);display:flex;gap:8px;align-items:baseline} .card h3 .art{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--blue)} .card h3 .sp{flex:1}
+.tg{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px} .tg th{font-weight:400;color:var(--mut);text-align:left;padding:2px 4px;border-bottom:1px solid var(--rule)} .tg td{padding:2px 4px;border-bottom:1px solid var(--rule);vertical-align:top}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12.5px} .kv .k{color:var(--mut)}
 .gauge{margin:6px 0} .gauge .t{display:flex;justify-content:space-between;font-size:12px} .gauge .bar{height:8px;background:var(--rule);border-radius:4px;overflow:hidden;margin-top:2px} .gauge .bar i{display:block;height:100%;background:var(--blue);transition:width .45s cubic-bezier(.2,.8,.2,1),background .3s} .gauge.tight .bar i{background:var(--warn)} .gauge.over .bar i{background:var(--mark)}
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px} .chip{font-size:11px;padding:1px 7px;border-radius:999px;background:var(--blue-soft);color:var(--blue);white-space:nowrap} .chip.no{background:var(--mark-soft);color:var(--mark)} .chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.mut{background:var(--paper);color:var(--mut)}
-.face{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:5px 0;border-top:1px solid var(--rule);font-size:12px} .face:first-of-type{border-top:0} .face .nm{font-weight:500} .face .req{color:var(--ink2);grid-column:1/-1}
+.face{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:5px 0;border-top:1px solid var(--rule);font-size:12px} .face:first-of-type{border-top:0} .face .nm{font-weight:400} .face .req{color:var(--ink2);grid-column:1/-1}
 .flag{color:var(--mark);font-size:12px;margin:3px 0;padding-left:14px;position:relative} .flag:before{content:"⚠";position:absolute;left:0} .flag.info{color:var(--warn)} .note{color:var(--ink2);font-size:12px;margin:3px 0;padding-left:14px;position:relative} .note:before{content:"·";position:absolute;left:4px}
 .status{font-size:11.5px;color:var(--mut)} .status.busy{color:var(--warn)} .status.err{color:var(--mark)}
-.lib .it{display:grid;grid-template-columns:56px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--rule);cursor:pointer} .lib .it:hover{background:var(--paper)} .lib img{width:56px;height:40px;object-fit:cover;border:1px solid var(--rule);background:#eee} .lib .nm{font-weight:500} .lib .sub{color:var(--mut);font-size:11.5px} .lib .it.cmp{outline:2px solid var(--blue);outline-offset:-2px}
-table.cmp{width:100%;border-collapse:collapse;font-size:12px} table.cmp th,table.cmp td{text-align:left;padding:3px 6px;border-bottom:1px solid var(--rule)} table.cmp th{color:var(--mut);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
-dialog{border:1.5px solid var(--ink);border-radius:4px;padding:14px 16px;font:inherit;width:360px;background:var(--sheet);color:var(--ink)} dialog::backdrop{background:rgba(0,0,0,.45)} dialog input,dialog textarea{width:100%;font:inherit;padding:4px 6px;border:1px solid var(--rule);border-radius:3px;margin:4px 0 10px;background:var(--sheet);color:var(--ink)}
+.lib .it{display:grid;grid-template-columns:56px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--rule);cursor:pointer} .lib .it:hover{background:var(--paper)} .lib img{width:56px;height:40px;object-fit:cover;border:1px solid var(--rule);background:#eee} .lib .nm{font-weight:400} .lib .sub{color:var(--mut);font-size:11.5px} .lib .it.cmp{outline:2px solid var(--blue);outline-offset:-2px}
+table.cmp{width:100%;border-collapse:collapse;font-size:12px} table.cmp th,table.cmp td{text-align:left;padding:3px 6px;border-bottom:1px solid var(--rule)} table.cmp th{color:var(--mut);font-weight:400;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+dialog{border:1px solid var(--rule);border-radius:6px;padding:14px 16px;font:inherit;width:360px;background:var(--sheet);color:var(--ink);box-shadow:var(--float)} dialog::backdrop{background:rgba(30,34,40,.35)} dialog input,dialog textarea{width:100%;font:inherit;padding:4px 6px;border:1px solid var(--rule);border-radius:3px;margin:4px 0 10px;background:var(--sheet);color:var(--ink)}
 .hint{font-size:11.5px;color:var(--mut);margin-top:6px}
 .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--ink2)} .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--sheet);padding:8px 14px;border-radius:4px;font-size:12.5px;opacity:0;transition:all .3s;pointer-events:none;z-index:50} .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -67,16 +73,16 @@ kbd{font:11px "IBM Plex Mono",monospace;border:1px solid var(--rule);border-bott
 #rhinoPane .row{display:flex;gap:6px;align-items:center;margin:4px 0} #rhinoPane input[type=text]{flex:1;font:inherit;padding:3px 6px;border:1px solid var(--rule);border-radius:3px;background:var(--sheet);color:var(--ink)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mut);margin-right:5px;vertical-align:middle} .dot.on{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)} .dot.err{background:var(--mark)}
 /* wizard */
-#dlgWiz{width:560px;max-width:92vw} #dlgWiz .whead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px} #dlgWiz .wtitle{font:600 12px "IBM Plex Sans";text-transform:uppercase;letter-spacing:.08em;color:var(--mut)} #dlgWiz .wprog{font-size:11.5px;color:var(--mut)}
-#dlgWiz h3{margin:6px 0 4px;font:600 17px "IBM Plex Sans Condensed",sans-serif} .whelp{color:var(--ink2);font-size:12.5px;margin:0 0 10px}
-.wopts{display:grid;gap:6px;margin:8px 0} .wopt{display:grid;grid-template-columns:18px 1fr;gap:2px 10px;align-items:start;padding:8px 10px;border:1px solid var(--rule);border-radius:4px;cursor:pointer;background:var(--sheet)} .wopt.on{border-color:var(--blue);background:var(--blue-soft)} .wopt input{margin-top:3px} .wopt .wl{font-weight:500} .wopt .wd{grid-column:2;color:var(--ink2);font-size:12px}
+#dlgWiz{width:560px;max-width:92vw} #dlgWiz .whead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px} #dlgWiz .wtitle{font:400 12px var(--sans);text-transform:uppercase;letter-spacing:.08em;color:var(--mut)} #dlgWiz .wprog{font-size:11.5px;color:var(--mut)}
+#dlgWiz h3{margin:6px 0 4px;font:400 17px var(--sans)} .whelp{color:var(--ink2);font-size:12.5px;margin:0 0 10px}
+.wopts{display:grid;gap:6px;margin:8px 0} .wopt{display:grid;grid-template-columns:18px 1fr;gap:2px 10px;align-items:start;padding:8px 10px;border:1px solid var(--rule);border-radius:4px;cursor:pointer;background:var(--sheet)} .wopt.on{border-color:var(--blue);background:var(--blue-soft)} .wopt input{margin-top:3px} .wopt .wl{font-weight:400} .wopt .wd{grid-column:2;color:var(--ink2);font-size:12px}
 .wcustom{display:flex;gap:8px;align-items:center;color:var(--ink2);font-size:12.5px;margin-top:4px} .wcustom input{width:120px}
 .wfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:14px} .wfoot .wcancel{margin-right:auto;border-color:var(--rule);color:var(--mut)}
 #dlgMap{width:900px;max-width:96vw} #map{width:100%;height:520px;border:1px solid var(--rule)} .maptools{display:flex;gap:8px;align-items:center;margin:8px 0} .maptools input{flex:1;font:inherit;padding:4px 6px;border:1px solid var(--rule);border-radius:3px}
 /* summary */
-#dlgSum{width:min(1100px,96vw);max-height:92vh;overflow:auto} .sumhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1.5px solid var(--ink);padding-bottom:8px;margin-bottom:10px} .sumhead h2{margin:0;font:600 18px "IBM Plex Sans Condensed",sans-serif}
-#dlgSum section{margin:12px 0} #dlgSum h3{font:600 13px "IBM Plex Sans",sans-serif;margin:0 0 4px;display:flex;gap:6px;align-items:baseline} #dlgSum h3 .n{background:var(--ink);color:var(--sheet);font-size:10px;padding:0 5px;border-radius:2px}
-table.sum{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed} table.sum th{text-align:left;font-weight:500;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--ink);padding:3px 5px}
+#dlgSum{width:min(1100px,96vw);max-height:92vh;overflow:auto} .sumhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;border-bottom:1px solid var(--rule);padding-bottom:8px;margin-bottom:10px} .sumhead h2{margin:0;font:400 18px var(--sans)}
+#dlgSum section{margin:12px 0} #dlgSum h3{font:400 13px var(--sans);margin:0 0 4px;display:flex;gap:6px;align-items:baseline} #dlgSum h3 .n{background:var(--ink2);color:var(--sheet);font-size:10px;padding:0 5px;border-radius:2px}
+table.sum{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed} table.sum th{text-align:left;font-weight:400;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--mut);padding:3px 5px}
 table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:top;overflow-wrap:anywhere} table.sum td.blk{width:7%;color:var(--mut);font-size:10px;text-transform:uppercase} table.sum td.val{width:16%} table.sum td.why{width:44%;color:var(--ink2);font-size:11px} table.sum td.ref{width:17%}
 .cite{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--blue);background:var(--blue-soft);padding:0 5px;border-radius:3px;margin:1px 2px 1px 0} sup.fl{color:var(--mark)} ul.fl{margin:0;padding-left:16px;font-size:12px} ul.fl li{margin:2px 0}
 @media print{ body>*:not(#dlgSum){display:none!important} #dlgSum{position:static;border:0;max-height:none;width:auto} .sumhead button{display:none} }
@@ -84,7 +90,7 @@ table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:
 </style></head>
 <body>
 <header>
-  <h1>Massing<br>Studio<small>VBBL 2025</small></h1>
+  <h1>Massing<br>Studio</h1>
   <input id="projName" value="Untitled massing" title="Project name — iterations are grouped by it">
   <span class="status" id="status">ready</span>
   <span class="sp"></span>
@@ -125,6 +131,7 @@ table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:
       <div class="field"><label>Grade elevation (m)</label><input id="grade" type="number" step="0.01"></div>
       <div class="field"><label>Sprinklered throughout</label><select id="spr"><option value="1">yes</option><option value="0">no</option></select></div>
       <div id="edgeFields"></div>
+      <div id="zoningFields"></div>
     </div></details>
     <details class="pane" id="pnBlocks"><summary>Blocks <span class="sp"></span><span class="acts"><button class="sm pri" id="btnAddBlockWiz">+ block…</button><button class="sm" id="btnAddBlock" title="quick add without the questionnaire">quick</button><button class="sm" id="btnDelBlock">delete</button></span></summary><div class="body">
       <div id="blockTabs" class="chips"></div>
@@ -184,12 +191,12 @@ const fmt=v=>typeof v==="number"?(Number.isInteger(v)?v.toLocaleString():v.toLoc
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 function newSpec(){
-  return {project_name:"Untitled massing", sprinklered:true, chosen_articles:{}, context:[], trees:[], streets:[],
+  return {project_name:"Untitled massing", sprinklered:true, chosen_articles:{}, context:[], trees:[], streets:[], ground:[],
     lot:{width_m:15.24, depth_m:37.19, grade_m:10, edges:{south:{kind:"street",row_width_m:20}, north:{kind:"lane",row_width_m:6}, east:{kind:"neighbour",row_width_m:0}, west:{kind:"neighbour",row_width_m:0}}},
     blocks:[{name:"A", footprint:[[0,0],[15.24,0],[15.24,30],[0,30]], holes:[], roof:{parapet_m:0.6,enclosure:null,balconies:[]}, first_floor_above_grade_m:0.1, default_glazing_pct:30, glazing_pct_by_edge:{},
       storeys:[{occupancy:"E",use:"retail CRU",floor_to_floor_m:3.5},{occupancy:"C",use:"apartment suites",floor_to_floor_m:3},{occupancy:"C",use:"apartment suites",floor_to_floor_m:3},{occupancy:"C",use:"apartment suites",floor_to_floor_m:3}]}]};
 }
-function normalize(s){ (s.blocks||[]).forEach(b=>{ b.glazing_pct_by_edge=b.glazing_pct_by_edge||{}; b.holes=b.holes||[]; b.roof=b.roof||{parapet_m:0.6,enclosure:null,balconies:[]}; b.roof.balconies=b.roof.balconies||[]; }); s.context=s.context||[]; s.trees=s.trees||[]; s.streets=s.streets||[]; s.chosen_articles=s.chosen_articles||{}; return s; }
+function normalize(s){ (s.blocks||[]).forEach(b=>{ b.glazing_pct_by_edge=b.glazing_pct_by_edge||{}; b.holes=b.holes||[]; b.roof=b.roof||{parapet_m:0.6,enclosure:null,balconies:[]}; b.roof.balconies=b.roof.balconies||[]; }); s.context=s.context||[]; s.trees=s.trees||[]; s.streets=s.streets||[]; s.ground=s.ground||[]; s.chosen_articles=s.chosen_articles||{}; return s; }
 function polyArea(fp){ let s=0; for(let i=0;i<fp.length;i++){const p=fp[i],q=fp[(i+1)%fp.length]; s+=p[0]*q[1]-q[0]*p[1];} return Math.abs(s)/2; }
 function bbox(pts){ const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]); return [Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)]; }
 // outward unit normal of edge e (pts[e] → pts[e+1]), whichever way the polygon winds
@@ -262,15 +269,18 @@ function drawPlan(){
   const [ex0,ey0,ex1,ey1]=planExtent();
   for(let g=Math.floor(ex0/5)*5; g<=ex1+5; g+=5){ const [gx]=toSvg(g,0); h+=`<line x1="${gx}" y1="0" x2="${gx}" y2="100" stroke="var(--grid)" stroke-width=".25"/>`; }
   for(let g=Math.floor(ey0/5)*5; g<=ey1+5; g+=5){ const [,gy]=toSvg(0,g); h+=`<line x1="0" y1="${gy}" x2="100" y2="${gy}" stroke="var(--grid)" stroke-width=".25"/>`; }
-  const band=(kind)=> kind==="street"?"rgba(200,53,43,.08)":kind==="lane"?"rgba(180,140,40,.14)":"none";
+  const band=(kind)=> kind==="street"?"rgba(192,86,77,.07)":kind==="lane"?"rgba(183,133,63,.11)":"none";
   const E=L.edges;
   const [x0,y0]=toSvg(0,0), [x1,y1]=toSvg(L.width_m,L.depth_m);
-  if(!L.polygon){ h+=`<rect x="${x0}" y="${y1-E.north.row_width_m*s}" width="${x1-x0}" height="${E.north.row_width_m*s}" fill="${band(E.north.kind)}"/>`;
+  // public realm from the City: block outlines (land), lanes cut out of them, sidewalk strips. The plan's background is the street.
+  const G=spec.ground||[]; const hasBlocks=G.some(g=>g.kind==="block");
+  for(const kind of ["block","lane","sidewalk"]) G.filter(g=>g.kind===kind).forEach(g=>{ h+=`<polygon class="${kind==="block"?"cityBlock":kind==="lane"?"laneCut":"walk"}" points="${ptsAttr(g.footprint)}"><title>${esc(g.name||g.kind)}${g.width_m?` · ${g.width_m} m`:""}</title></polygon>`; });
+  if(!L.polygon&&!hasBlocks){ h+=`<rect x="${x0}" y="${y1-E.north.row_width_m*s}" width="${x1-x0}" height="${E.north.row_width_m*s}" fill="${band(E.north.kind)}"/>`;
     h+=`<rect x="${x0}" y="${y0}" width="${x1-x0}" height="${E.south.row_width_m*s}" fill="${band(E.south.kind)}"/>`;
     h+=`<rect x="${x1}" y="${y1}" width="${E.east.row_width_m*s}" height="${y0-y1}" fill="${band(E.east.kind)}"/>`;
     h+=`<rect x="${x0-E.west.row_width_m*s}" y="${y1}" width="${E.west.row_width_m*s}" height="${y0-y1}" fill="${band(E.west.kind)}"/>`;
     // ROW centrelines
-    const cl=(kind)=>kind==="street"?"#c8352b":kind==="lane"?"#b26b00":null;
+    const cl=(kind)=>kind==="street"?"var(--mark)":kind==="lane"?"var(--warn)":null;
     [["south",[0,-E.south.row_width_m/2],[L.width_m,-E.south.row_width_m/2]],["north",[0,L.depth_m+E.north.row_width_m/2],[L.width_m,L.depth_m+E.north.row_width_m/2]],["east",[L.width_m+E.east.row_width_m/2,0],[L.width_m+E.east.row_width_m/2,L.depth_m]],["west",[-E.west.row_width_m/2,0],[-E.west.row_width_m/2,L.depth_m]]].forEach(([k,a,b])=>{ const c=cl(E[k].kind); if(c&&E[k].row_width_m){ const [ax,ay]=toSvg(...a),[bx,by]=toSvg(...b); h+=`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${c}" stroke-width=".3" stroke-dasharray="2 1" opacity=".7"/>`; } });
   }
   // context buildings
@@ -296,7 +306,10 @@ function drawPlan(){
       h+=`<g class="lotEdge" data-seg="${i}" transform="translate(${mx},${my}) rotate(${rot})"><rect x="-9" y="-2.4" width="18" height="3.8" stroke-width=".2"/><text text-anchor="middle" dominant-baseline="middle">${k.kind}${k.kind!=="neighbour"?` ${k.row_width_m} m`:""}</text></g>`; });
   } else {
     h+=`<rect x="${x0}" y="${y1}" width="${x1-x0}" height="${y0-y1}" fill="none" stroke="var(--ink)" stroke-width=".5" stroke-dasharray="1.6 .8"/>`;
-    if(L.setbacks){ const sb=L.setbacks; const [sx0,sy0]=toSvg(sb.side,sb.front),[sx1,sy1]=toSvg(L.width_m-sb.side,L.depth_m-sb.rear); h+=`<rect x="${sx0}" y="${sy1}" width="${sx1-sx0}" height="${sy0-sy1}" fill="none" stroke="#b26b00" stroke-width=".3" stroke-dasharray=".8 .8" opacity=".8"/>`; }
+    if(L.setbacks){ const sb=L.setbacks; const [sx0,sy0]=toSvg(sb.side,sb.front),[sx1,sy1]=toSvg(L.width_m-sb.side,L.depth_m-sb.rear); h+=`<rect x="${sx0}" y="${sy1}" width="${sx1-sx0}" height="${sy0-sy1}" fill="none" stroke="var(--warn)" stroke-width=".3" stroke-dasharray=".8 .8" opacity=".8"/>`; }
+    else if(results&&results.zoning&&(results.zoning.yards||[]).some(y=>y.required_m)){ // the district's minimum yards, as a dashed envelope
+      const Y={}; for(const y of results.zoning.yards) Y[y.edge]=y.required_m||0; const [sx0,sy0]=toSvg(Y.west||0,Y.south||0),[sx1,sy1]=toSvg(L.width_m-(Y.east||0),L.depth_m-(Y.north||0));
+      if(sx1>sx0&&sy0>sy1) h+=`<rect x="${sx0}" y="${sy1}" width="${sx1-sx0}" height="${sy0-sy1}" fill="none" stroke="var(--warn)" stroke-width=".3" stroke-dasharray=".8 .8" opacity=".8"><title>zoning yards (${results.zoning.district})</title></rect>`; }
     const lbl=(side,x,y,rot)=>`<g class="lotEdge" data-side="${side}" transform="translate(${x},${y}) rotate(${rot})"><rect x="-11" y="-2.6" width="22" height="4.2" stroke-width=".2"/><text text-anchor="middle" dominant-baseline="middle">${side} · ${E[side].kind}${E[side].kind!=="neighbour"?` ${E[side].row_width_m} m`:""}</text></g>`;
     h+=lbl("south",(x0+x1)/2,y0+3.5,0)+lbl("north",(x0+x1)/2,y1-3.5,0)+lbl("east",x1+3.5,(y0+y1)/2,-90)+lbl("west",x0-3.5,(y0+y1)/2,-90);
   }
@@ -318,7 +331,7 @@ function drawPlan(){
       else h+=`<text class="edgeLbl" x="${(ax+bx)/2}" y="${(ay+by)/2}" text-anchor="middle" dominant-baseline="middle">${len}</text>`; });
     if(bi===sel) tgt.pts.forEach((p,i)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx" data-b="${bi}" data-v="${i}" cx="${px}" cy="${py}" r="1.3"/>`; });
     const [bx0,by0,bx1,by1]=bbox(tgt.pts); const [cx,cy]=toSvg((bx0+bx1)/2,(by0+by1)/2);
-    h+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" style="font:600 3px 'IBM Plex Sans Condensed',sans-serif;fill:var(--ink);pointer-events:none">${esc(b.name)} · ${b.storeys.length} st${bi===sel&&editStorey!=null?` · editing L${editStorey}`:""}</text>`;
+    h+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" style="font:400 3px var(--sans);fill:var(--ink);pointer-events:none">${esc(b.name)} · ${b.storeys.length} st${bi===sel&&editStorey!=null?` · editing L${editStorey}`:""}</text>`;
   });
   h+=`<text x="1" y="99" style="font:2.4px 'IBM Plex Mono',monospace;fill:var(--mut)">N ↑  grid 5 m</text>`;
   svg.innerHTML=h;
@@ -356,8 +369,37 @@ svg.addEventListener("pointerup",()=>{ if(drag){ drag=null; changed(); } });
 svg.addEventListener("dblclick",ev=>{ const t=ev.target; if(t.classList.contains("edgeHit")){ const e=+t.dataset.e; const fp=t.dataset.c!==undefined?spec.context[+t.dataset.c].footprint:editTarget().pts; const p=fp[e],q=fp[(e+1)%fp.length]; fp.splice(e+1,0,[snap((p[0]+q[0])/2),snap((p[1]+q[1])/2)]); changed(); } });
 
 // ------------------------------------------------------------------ lot & block panels
+// ---- zoning district and its limits (Zoning and Development By-law No. 3575); the table comes from the engine data
+let ZONING=null;
+async function loadZoning(){ if(!ZONING){ try{ ZONING=await apiZoning(); }catch(e){ console.warn("zoning table unavailable",e); ZONING={districts:{},aliases:{},alias_note:{},toa:{tiers:{}},use_classes:{}}; } } return ZONING; }
+const Z_FIELDS=[["height_m","height (m)","height_m_conditional"],["max_storeys","storeys","max_storeys_conditional"],["fsr","FSR","fsr_conditional"],["coverage_pct","site coverage (%)",null],
+  ["front_m","front yard (m)",null],["side_m","side yard (m)",null],["rear_m","rear yard (m)",null],["flank_m","flanking side yard (m)",null],["min_site_m2","min. site area (m²)",null],["min_frontage_m","min. frontage (m)",null]];
+function zoningCode(c){ return c?String(c).replace(/\s*\(.*\)\s*$/,"").trim().toUpperCase():null; }
+function zoningTableRules(code){ if(!ZONING) return null; const c=zoningCode(code)||""; const d=ZONING.districts[ZONING.aliases[c]||c]; if(!d) return null;
+  return {district:c, label:d.label, uses:{...d.uses}, height_m:d.height_m, height_m_conditional:d.height_m_conditional, max_storeys:d.max_storeys, max_storeys_conditional:d.max_storeys_conditional, fsr:d.fsr, fsr_conditional:d.fsr_conditional, coverage_pct:d.coverage_pct, front_m:d.front_m, side_m:d.side_m, side_pct:d.side_pct, flank_m:d.flank_m, rear_m:d.rear_m, min_site_m2:d.min_site_m2, min_frontage_m:d.min_frontage_m, toa:null, designer_edited:false, source:d.schedule}; }
+function zoningEffective(){ const L=spec.lot; const t=zoningTableRules((L.zoning_rules&&L.zoning_rules.district)||L.zoning)||{}; const g=L.zoning_rules||{}; const out={...t}; for(const [k,v] of Object.entries(g)) if(v!==null&&v!==undefined&&k!=="uses") out[k]=v; out.uses=(g.uses&&Object.keys(g.uses).length)?g.uses:(t.uses||{}); return out; }
+function setZoningOverride(field,value){ const L=spec.lot; const eff=zoningEffective(); L.zoning_rules={...eff, [field]:value, district:zoningCode(L.zoning)||eff.district||null, designer_edited:true, source:(eff.source||"")+(/designer/.test(eff.source||"")?"":" · designer-edited")}; changed(true); }
+function drawZoningFields(){
+  const box=$("#zoningFields"); if(!box) return; const L=spec.lot;
+  if(!ZONING){ box.innerHTML=`<div class="hint">loading zoning table…</div>`; loadZoning().then(drawZoningFields); return; }
+  const code=zoningCode(L.zoning); const codes=[...Object.keys(ZONING.districts),...Object.keys(ZONING.aliases).filter(a=>["RM-4N","C-2B","C-2C","C-2C1","RS-1"].includes(a))].sort();
+  if(code&&!codes.includes(code)) codes.push(code);
+  const eff=zoningEffective(); const edited=!!(L.zoning_rules&&L.zoning_rules.designer_edited); const known=!!zoningTableRules(code);
+  const num=(k,v)=>`<input class="zr" data-k="${k}" type="number" step="0.1" min="0" value="${v==null?"":v}" placeholder="—" style="width:52px">`;
+  box.innerHTML=`<div class="field"><label>Zoning district</label><span><select id="zDist">${["",...codes].map(c=>`<option value="${c}" ${c===(code||"")?"selected":""}>${c||"— none —"}</option>`).join("")}<option value="__other">other…</option></select></span></div>
+    <div class="hint">${code?(known?`${esc(eff.label||"")} · ${esc(eff.source||"")}`:`${esc(code)} is not in the table — enter its limits below`):"No district: zoning is not checked. Pick one, or a site from the map."}${edited?` · <b>designer-edited</b> <button class="sm" id="zReset">reset to district</button>`:""}</div>
+    <details class="zlim"><summary class="hint" style="cursor:pointer">Limits — outright / conditional (edit to override)</summary>
+      ${Z_FIELDS.map(([k,lab,kc])=>`<div class="field"><label>${lab}</label><span>${num(k,eff[k])}${kc?` / ${num(kc,eff[kc])}`:""}</span></div>`).join("")}
+      <div class="field"><label>Transit-Oriented Area (Bill 47)</label><span><select class="zr" data-k="toa"><option value="">none</option>${Object.entries(ZONING.toa.tiers).map(([k,t])=>`<option value="${k}" ${eff.toa===k?"selected":""}>${esc(t.label)} — ≥ ${t.min_storeys} st, FSR ${t.min_fsr}</option>`).join("")}</select></span></div>
+      <div class="hint">${esc(ZONING.review_note||"")}</div>
+    </details>`;
+  $("#zDist").onchange=()=>{ const v=$("#zDist").value; if(v==="__other"){ const c=prompt("District code (e.g. RM-8A, FM-1, CD-1 (512))",L.zoning||""); if(c===null){ drawZoningFields(); return; } L.zoning=c.trim()||null; } else L.zoning=v||null; L.zoning_rules=null; changed(true); };
+  const rs=$("#zReset"); if(rs) rs.onclick=()=>{ L.zoning_rules=null; changed(true); };
+  box.querySelectorAll(".zr").forEach(el=>el.onchange=()=>{ const k=el.dataset.k; const v=el.value===""?null:(k==="toa"?el.value:+el.value); if(k==="toa"&&!v){ setZoningOverride("toa",null); return; } setZoningOverride(k,v); });
+}
 function drawLotFields(){
   $("#lotW").value=spec.lot.width_m; $("#lotD").value=spec.lot.depth_m; $("#grade").value=spec.lot.grade_m; $("#spr").value=spec.sprinklered?"1":"0"; $("#projName").value=spec.project_name;
+  drawZoningFields();
   if(spec.lot.polygon){ const K=spec.lot.edge_kinds||[]; $("#edgeFields").innerHTML=`<div class="hint">${esc(spec.lot.source||"polygon lot")}${spec.lot.zoning?` · zoning ${esc(spec.lot.zoning)}`:""}${spec.lot.address?` · ${esc(spec.lot.address)}`:""}</div>`+spec.lot.polygon.map((p,i)=>{const e=K[i]||{kind:"neighbour",row_width_m:0}; return `<div class="field"><label>edge ${i}</label><span><select data-seg="${i}" class="segKind"><option ${e.kind==="street"?"selected":""}>street</option><option ${e.kind==="lane"?"selected":""}>lane</option><option ${e.kind==="neighbour"?"selected":""}>neighbour</option></select> <input class="segW" data-seg="${i}" type="number" step="0.5" min="0" value="${e.row_width_m}" style="width:64px" ${e.kind==="neighbour"?"disabled":""}></span></div>`;}).join("");
     document.querySelectorAll(".segKind").forEach(el=>el.onchange=()=>{spec.lot.edge_kinds=spec.lot.edge_kinds||spec.lot.polygon.map(()=>({kind:"neighbour",row_width_m:0})); const e=spec.lot.edge_kinds[+el.dataset.seg]; e.kind=el.value; e.row_width_m=e.kind==="street"?(e.row_width_m||20):e.kind==="lane"?(e.row_width_m||6):0; drawLotFields(); changed();});
     document.querySelectorAll(".segW").forEach(el=>el.onchange=()=>{spec.lot.edge_kinds[+el.dataset.seg].row_width_m=+el.value; changed();});
@@ -426,9 +468,10 @@ function drawBlockPanel(){
 }
 function drawCtxPanel(){
   const C=spec.context||[]; const nt=(spec.trees||[]).length, ns=new Set((spec.streets||[]).map(s=>s.name)).size; const src=(C.find(c=>c.source)||{}).source;
-  const head=(src||nt||ns)?`<div class="hint" style="margin:0 0 6px">${src?`${esc(src.split(" · ")[0])} · `:""}${C.length} buildings${nt?` · ${nt} trees`:""}${ns?` · ${ns} street names`:""} · <a href="#" id="ctxClear" style="color:inherit">clear all</a></div>`:"";
+  const G=spec.ground||[]; const nb=G.filter(g=>g.kind==="block").length, nw=G.filter(g=>g.kind==="sidewalk").length; const gsrc=(G.find(g=>g.kind==="sidewalk")||{}).source;
+  const head=(src||nt||ns||G.length)?`<div class="hint" style="margin:0 0 6px">${src?`${esc(src.split(" · ")[0])} · `:""}${C.length} buildings${nt?` · ${nt} trees`:""}${ns?` · ${ns} street names`:""}${nb?` · ${nb} block outlines`:""}${nw?` · <span title="${esc(gsrc||"")}">${nw} sidewalks (nominal)</span>`:""} · <a href="#" id="ctxClear" style="color:inherit">clear all</a></div>`:"";
   $("#ctxPanel").innerHTML=head+(C.length?C.map((c,i)=>`<div class="field" style="grid-template-columns:1fr auto auto"><input class="cName" data-i="${i}" value="${esc(c.name)}" title="${esc(c.source||"drawn by hand")}" style="text-align:left;width:auto;${i===ctxSel?"border-color:var(--blue)":""}"><input class="cH" data-i="${i}" type="number" step="0.5" min="1" value="${c.height_m}" style="width:64px" title="height (m)"><button class="sm ghost cDel" data-i="${i}">×</button></div>`).join("")+`<div class="hint">Neighbours are context for the 3D view and the Rhino file only — limiting distance is to the property line.</div>`:`<div class="hint">No neighbouring buildings drawn. They cast shadows in 3D and export to the Rhino <span class="mono">Context</span> layer. Picking a site on the map brings the real neighbours, trees and street names from City of Vancouver Open Data.</div>`);
-  const cc=$("#ctxClear"); if(cc) cc.onclick=ev=>{ ev.preventDefault(); spec.context=[]; spec.trees=[]; spec.streets=[]; ctxSel=null; changed(); };
+  const cc=$("#ctxClear"); if(cc) cc.onclick=ev=>{ ev.preventDefault(); spec.context=[]; spec.trees=[]; spec.streets=[]; spec.ground=[]; ctxSel=null; changed(); };
   document.querySelectorAll(".cName").forEach(el=>{ el.onchange=()=>{ C[+el.dataset.i].name=el.value; changed(); }; el.onfocus=()=>{ ctxSel=+el.dataset.i; drawPlan(); }; });
   document.querySelectorAll(".cH").forEach(el=>el.onchange=()=>{ C[+el.dataset.i].height_m=+el.value; changed(); });
   document.querySelectorAll(".cDel").forEach(el=>el.onclick=()=>{ C.splice(+el.dataset.i,1); ctxSel=null; changed(); });
@@ -443,7 +486,7 @@ $("#btnExample").onclick=async()=>{ spec=normalize(await apiExample()); sel=0; e
 const canvas=$("#three"); let renderer=null, scene=null, sun=null, hemi=null;
 try{ renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true}); renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; scene=new THREE.Scene(); }catch(e){ console.warn("3D unavailable:",e); }
 const camera=new THREE.PerspectiveCamera(36,2,0.1,3000); let massGroup=new THREE.Group();
-if(scene){ hemi=new THREE.HemisphereLight(0xffffff,0x9aa1ab,.65); scene.add(hemi); sun=new THREE.DirectionalLight(0xfff8ee,1.0); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-0.0006; scene.add(sun); scene.add(sun.target); scene.add(massGroup); }
+if(scene){ hemi=new THREE.HemisphereLight(0xffffff,0x9aa1ab,.45); scene.add(hemi); sun=new THREE.DirectionalLight(0xfff8ee,1.0); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-0.0006; scene.add(sun); scene.add(sun.target); scene.add(massGroup); }
 let orbit={th:-0.9,ph:0.95,r:1,pan:[0,0]}; let od=null;
 canvas.addEventListener("contextmenu",e=>e.preventDefault());
 canvas.addEventListener("pointerdown",e=>{od={x:e.clientX,y:e.clientY,btn:e.button,shift:e.shiftKey}; canvas.setPointerCapture(e.pointerId);}); canvas.addEventListener("pointerup",()=>od=null);
@@ -472,14 +515,20 @@ function shapeOf(pts,holes){ const sh=new THREE.Shape(pts.map(p=>new THREE.Vecto
 function build3d(){
   if(!renderer) return; massGroup.clear(); const L=spec.lot; const dark=isDark();
   const lotPts=L.polygon||[[0,0],[L.width_m,0],[L.width_m,L.depth_m],[0,L.depth_m]];
-  const [ex0,ey0,ex1,ey1]=sceneExtent(); const pad=Math.max(ex1-ex0,ey1-ey0)*0.6;
+  const [ex0,ey0,ex1,ey1]=sceneExtent(); const pad=Math.max(ex1-ex0,ey1-ey0)*1.0;
   // palette: a quiet grey ground so the massing (occupancy colours) is the only thing with colour
-  const P=dark?{ground:0x1b1f25,lot:0x242931,line:0x7c848f,street:0x2a2a2e,lane:0x2b2a26,ctx:0x343a42,ctxEdge:0x565d67,edge:0xffffff,edgeA:.18,parapet:0x6e7680,balcony:0x8c949e,svc:0x59616c,bg:0x14171b,hemiGround:0x1a1e25}
-               :{ground:0xe0e3e7,lot:0xd3d7dc,line:0x8a919b,street:0xdcd8da,lane:0xdddad2,ctx:0xcdd1d6,ctxEdge:0xa3a9b1,edge:0x2a2f36,edgeA:.16,parapet:0xc6cbd1,balcony:0xe8eaed,svc:0xb3b9c0,bg:0xe9ebee,hemiGround:0x9aa1ab};
-  // ground
-  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(ex1-ex0+2*pad,ey1-ey0+2*pad),new THREE.MeshLambertMaterial({color:P.ground})); gnd.rotation.x=-Math.PI/2; gnd.position.set((ex0+ex1)/2,-0.02,-(ey0+ey1)/2); gnd.receiveShadow=true; massGroup.add(gnd);
-  // ROW bands
-  if(!L.polygon){ const E=L.edges; const bandMat=k=>new THREE.MeshLambertMaterial({color:k==="street"?P.street:P.lane,transparent:true,opacity:.9});
+  const P=dark?{ground:0x1b1f25,row:0x14171c,walk:0x272c33,lot:0x242931,line:0x7c848f,street:0x2a2a2e,lane:0x2b2a26,ctx:0x343a42,ctxEdge:0x565d67,edge:0xffffff,edgeA:.18,parapet:0x6e7680,balcony:0x8c949e,svc:0x59616c,bg:0x15181c,hemiGround:0x1a1e25,trunk:0x4e3f2c,crown:0x4a6b4e}
+               :{ground:0xe0e3e7,row:0xcdd1d6,walk:0xe8e9eb,lot:0xd8dce1,line:0x8a919b,street:0xdcd8da,lane:0xdddad2,ctx:0xcdd1d6,ctxEdge:0xa3a9b1,edge:0x2a2f36,edgeA:.16,parapet:0xc6cbd1,balcony:0xe8eaed,svc:0xb3b9c0,bg:0xe8eaed,hemiGround:0x9aa1ab,trunk:0x7a6248,crown:0x89ad86};
+  // ground. With the City's block outlines present (site picked from the map) the ground plane is the street right-of-way
+  // and each block sits on it as the land; lanes are cut back out of the blocks and sidewalks laid along the property lines.
+  const G=spec.ground||[]; const hasBlocks=G.some(g=>g.kind==="block");
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(ex1-ex0+2*pad,ey1-ey0+2*pad),new THREE.MeshLambertMaterial({color:hasBlocks?P.row:P.ground})); gnd.rotation.x=-Math.PI/2; gnd.position.set((ex0+ex1)/2,-0.02,-(ey0+ey1)/2); gnd.receiveShadow=true; massGroup.add(gnd);
+  const decal=(pts,color,y,order)=>{ if(!pts||pts.length<3) return null; const g=new THREE.ShapeGeometry(shapeOf(pts)); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color,polygonOffset:true,polygonOffsetFactor:-order,polygonOffsetUnits:-order})); m.position.y=y; m.receiveShadow=true; massGroup.add(m); return g; };
+  G.filter(g=>g.kind==="block").forEach(g=>{ const geo=decal(g.footprint,P.ground,-0.016,1); if(geo){ const e=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:P.line,transparent:true,opacity:.45})); e.position.y=-0.016; massGroup.add(e); } });
+  G.filter(g=>g.kind==="lane").forEach(g=>decal(g.footprint,P.row,-0.012,2));
+  G.filter(g=>g.kind==="sidewalk").forEach(g=>decal(g.footprint,P.walk,-0.008,3));
+  // ROW bands (a lot described by hand: no block outlines to show the street, so shade the declared right-of-way)
+  if(!L.polygon&&!hasBlocks){ const E=L.edges; const bandMat=k=>new THREE.MeshLambertMaterial({color:k==="street"?P.street:P.lane,transparent:true,opacity:.9});
     const band=(x,z,w,d,k)=>{ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),bandMat(k)); m.rotation.x=-Math.PI/2; m.position.set(x,-0.01,z); m.receiveShadow=true; massGroup.add(m); };
     if(E.south.kind!=="neighbour") band(L.width_m/2, E.south.row_width_m/2, L.width_m+2*L.width_m, E.south.row_width_m, E.south.kind);
     if(E.north.kind!=="neighbour") band(L.width_m/2, -L.depth_m-E.north.row_width_m/2, L.width_m+2*L.width_m, E.north.row_width_m, E.north.kind);
@@ -489,11 +538,11 @@ function build3d(){
   const lotGeo=new THREE.ShapeGeometry(shapeOf(lotPts)); lotGeo.rotateX(-Math.PI/2);
   const lot=new THREE.Mesh(lotGeo,new THREE.MeshLambertMaterial({color:P.lot})); lot.position.y=0; lot.receiveShadow=true; massGroup.add(lot);
   massGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(lotGeo),new THREE.LineBasicMaterial({color:P.line})));
-  if(L.setbacks&&!L.polygon){ const sb=L.setbacks; const g=new THREE.EdgesGeometry(new THREE.ShapeGeometry(shapeOf([[sb.side,sb.front],[L.width_m-sb.side,sb.front],[L.width_m-sb.side,L.depth_m-sb.rear],[sb.side,L.depth_m-sb.rear]]))); g.rotateX(-Math.PI/2); const l=new THREE.LineSegments(g,new THREE.LineDashedMaterial({color:0xb26b00,dashSize:.6,gapSize:.4})); l.computeLineDistances(); l.position.y=0.02; massGroup.add(l); }
+  if(L.setbacks&&!L.polygon){ const sb=L.setbacks; const g=new THREE.EdgesGeometry(new THREE.ShapeGeometry(shapeOf([[sb.side,sb.front],[L.width_m-sb.side,sb.front],[L.width_m-sb.side,L.depth_m-sb.rear],[sb.side,L.depth_m-sb.rear]]))); g.rotateX(-Math.PI/2); const l=new THREE.LineSegments(g,new THREE.LineDashedMaterial({color:0xb7853f,dashSize:.6,gapSize:.4})); l.computeLineDistances(); l.position.y=0.02; massGroup.add(l); }
   // context
   (spec.context||[]).forEach(c=>{ const g=new THREE.ExtrudeGeometry(shapeOf(c.footprint),{depth:c.height_m,bevelEnabled:false}); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:P.ctx})); m.castShadow=m.receiveShadow=true; massGroup.add(m); massGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:P.ctxEdge}))); });
   // trees: a trunk up to the crown centre, a sphere for the crown (height and crown from the public-trees record)
-  if($("#chkTrees").checked&&(spec.trees||[]).length){ const trunkMat=new THREE.MeshLambertMaterial({color:dark?0x4e3a20:0x6b4f2a}), crownMat=new THREE.MeshLambertMaterial({color:dark?0x3f6f44:0x6aa864});
+  if($("#chkTrees").checked&&(spec.trees||[]).length){ const trunkMat=new THREE.MeshLambertMaterial({color:P.trunk}), crownMat=new THREE.MeshLambertMaterial({color:P.crown});
     (spec.trees||[]).forEach(t=>{ const cr=t.crown_m/2, cz=Math.max(cr,t.height_m-cr); const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.2,cz,8),trunkMat); trunk.position.set(t.x,cz/2,-t.y); trunk.castShadow=true; massGroup.add(trunk);
       const crown=new THREE.Mesh(new THREE.SphereGeometry(cr,12,9),crownMat); crown.position.set(t.x,cz,-t.y); crown.castShadow=crown.receiveShadow=true; massGroup.add(crown); }); }
   // blocks
@@ -527,7 +576,7 @@ function render3d(){ if(!renderer) return; const L=spec.lot; const w=canvas.clie
   camera.aspect=(w+S)/h; camera.setViewOffset(w+S,h,S,0,w,h); camera.updateProjectionMatrix();
   const lotPts=L.polygon||[[0,0],[L.width_m,0],[L.width_m,L.depth_m],[0,L.depth_m]]; const [lx0,ly0,lx1,ly1]=bbox(lotPts); const span=Math.max(lx1-lx0,ly1-ly0); const R=span*1.6*orbit.r; const c=new THREE.Vector3((lx0+lx1)/2+orbit.pan[0],Math.min(10,span*0.12),-(ly0+ly1)/2+orbit.pan[1]);
   camera.position.set(c.x+R*Math.sin(orbit.ph)*Math.cos(orbit.th), c.y+R*Math.cos(orbit.ph), c.z+R*Math.sin(orbit.ph)*Math.sin(orbit.th)); camera.lookAt(c);
-  if(sun){ const az=+$("#sunAz").value*Math.PI/180, alt=+$("#sunAlt").value*Math.PI/180; const D=span*2.5; sun.position.set(c.x+D*Math.cos(alt)*Math.sin(az), D*Math.sin(alt), c.z+D*Math.cos(alt)*Math.cos(az)); sun.target.position.copy(c); sun.shadow.camera.left=sun.shadow.camera.bottom=-span*1.2; sun.shadow.camera.right=sun.shadow.camera.top=span*1.2; sun.shadow.camera.near=1; sun.shadow.camera.far=D*3; sun.shadow.camera.updateProjectionMatrix(); sun.intensity=0.5+0.7*Math.sin(alt); }
+  if(sun){ const az=+$("#sunAz").value*Math.PI/180, alt=+$("#sunAlt").value*Math.PI/180; const D=span*2.5; sun.position.set(c.x+D*Math.cos(alt)*Math.sin(az), D*Math.sin(alt), c.z+D*Math.cos(alt)*Math.cos(az)); sun.target.position.copy(c); sun.shadow.camera.left=sun.shadow.camera.bottom=-span*1.2; sun.shadow.camera.right=sun.shadow.camera.top=span*1.2; sun.shadow.camera.near=1; sun.shadow.camera.far=D*3; sun.shadow.camera.updateProjectionMatrix(); sun.intensity=0.3+0.5*Math.sin(alt); }   // matte: sky + sun never push a light grey past white
   renderer.render(scene,camera); placeLabels(); }
 new ResizeObserver(render3d).observe(canvas);
 
@@ -538,6 +587,7 @@ function scheduleAnalyze(){ clearTimeout(timer); $("#status").textContent="check
 // @@API-START  (the artifact build swaps these for the in-page engine)
 async function apiAnalyze(sp){ const r=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(sp)}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
 async function apiExample(){ return (await fetch("/api/examples/demo")).json(); }
+async function apiZoning(){ return (await fetch("/api/zoning")).json(); }
 // the code summary of the massing on screen as an Excel workbook (local app only: the server builds it)
 async function apiSummaryXlsx(sp,name){ const r=await fetch("/api/summary.xlsx?name="+encodeURIComponent(name),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(sp)}); if(!r.ok) throw new Error(await r.text());
   const url=URL.createObjectURL(await r.blob()); const a=document.createElement("a"); a.href=url; a.download=(r.headers.get("Content-Disposition")||"").match(/filename="([^"]+)"/)?.[1]||"code-summary.xlsx"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); }
@@ -554,12 +604,33 @@ function targetsHtml(blk){
   const T=(results.targets||{})[blk]; if(!T) return "";
   const rows=T.storeys.slice().reverse().map(s=>`<tr><td class="mono">${s.label}</td><td class="mono">${s.net}${s.gross!==s.net?` <span style="color:var(--mut)">(${s.gross})</span>`:""}</td><td class="mono">${s.exits}</td><td class="mono">${s.travel_m} m</td><td class="mono">${s.widths.stair_each_mm}</td><td>${s.washrooms.map(wcText).filter(Boolean).join(" · ")||"—"}</td></tr>`).join("");
   const e=T.egress||{};
-  return `<div class="sub-h" style="font-size:12px;font-weight:500">Targets — occupant load, egress, washrooms (3.1.17 · 3.4 · 3.7.2)</div>
+  return `<div class="sub-h" style="font-size:12px;font-weight:400">Targets — occupant load, egress, washrooms (3.1.17 · 3.4 · 3.7.2)</div>
     <table class="tg"><thead><tr><th>Storey</th><th title="designed load (gross in brackets)">Load</th><th>Exits</th><th title="travel distance limit 3.4.2.5">Travel ≤</th><th title="clear width per exit stair, mm (3.4.3.2)">Stair mm</th><th>Washrooms (3.7.2.2)</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="hint">Building: <b>${fmt(T.total.net)}</b> persons${T.total.gross!==T.total.net?` (gross ${fmt(T.total.gross)})`:""} · <b>${e.exits||"—"}</b> exit stairs sized for ${e.governing_storey||"—"} (${e.governing_load||0} p.) → <b>${e.stair_each_mm||"—"} mm</b> each · doors ${e.door_each_mm||"—"} mm${T.gender_neutral.wc?` · <b>${T.gender_neutral.wc}</b> gender-neutral wc (VBBL 3.7.2.9, non-residential load ${T.gender_neutral.non_residential_load})`:""}</div>`;
 }
+const Z_STATUS={outright:["ok","within outright limits"],conditional:["warn","conditional — Director of Planning"],toa:["warn","within the TOA minimum"],exceeds:["no","exceeds district limits"],unlimited:["mut","no limits encoded"],unknown:["mut","no district set"]};
+function zGauge(it){ // a maximum: value against the cap (outright in solid, conditional / TOA beyond it)
+  if(it.cap===null||it.cap===undefined) return `<div class="gauge"><div class="t"><span>${esc(it.what)}</span><span class="mono">${fmt(it.value)} ${esc(it.unit)} · no limit encoded</span></div></div>`;
+  const frac=Math.min(1,it.value/it.cap); const cls=it.status==="exceeds"?"over":(it.status!=="outright"||frac>0.85)?"tight":"";
+  const lim=[it.outright!=null?`${fmt(it.outright)}`:null,it.conditional!=null?`cond. ${fmt(it.conditional)}`:null,it.toa!=null?`TOA ${fmt(it.toa)}`:null].filter(Boolean).join(" / ");
+  return `<div class="gauge ${cls}"><div class="t"><span>${esc(it.what)}</span><span class="mono">${fmt(it.value)} / ${lim} ${esc(it.unit)} · <b>${it.headroom<0?"over by "+fmt(-it.headroom):fmt(it.headroom)+" left"}</b></span></div><div class="bar"><i style="width:${frac*100}%"></i></div></div>`; }
+function zoningHtml(){
+  const z=results.zoning; if(!z) return "";
+  const [cls,txt]=Z_STATUS[z.status]||Z_STATUS.unknown;
+  const chip=`<span class="chip ${cls==="warn"?"":cls}" ${cls==="warn"?'style="background:var(--warn-soft);color:var(--warn)"':""}>${txt}</span>`;
+  if(z.status==="unknown") return `<div class="card"><h3>Zoning <span class="art">—</span><span class="sp"></span>${chip}</h3><div class="hint">${esc((z.notes||[]).join(" "))}</div></div>`;
+  const yards=(z.yards||[]).map(y=>`<div class="face"><span class="nm">${esc(y.role==="flank"?"flanking side":y.role)} yard · ${esc(y.edge)} (${esc(y.kind)})</span><span class="mono">${fmt(y.measured_m)} m${y.required_m!=null?` / ≥ ${fmt(y.required_m)} m <span class="chip ${y.ok?"ok":"no"}">${y.ok?"ok":"short "+fmt(Math.round((y.required_m-y.measured_m)*100)/100)+" m"}</span>`:` · <span class="chip mut">no minimum encoded</span>`}</span></div>`).join("");
+  const uses=(z.uses||[]).map(u=>`<div class="face"><span class="nm">${esc(u.block)} · uses</span><span class="chip ${u.ok?"ok":"no"}">${u.ok?"listed":"not permitted"}</span><span class="req">${esc(u.text)}</span></div>`).join("");
+  return `<div class="card"><h3>Zoning <span class="art">${esc(z.district||"")}</span><span class="sp"></span>${chip}</h3>
+    <div class="hint">${esc(z.label||"")} · ${esc(z.source||"")}${z.designer_edited?" · <b>designer-edited limits</b>":""} · site ${fmt(z.site_area_m2)} m²${z.floor_area_m2!=null?` · floor area ${fmt(z.floor_area_m2)} m²`:""}${z.coverage_pct!=null?` · coverage ${fmt(z.coverage_pct)} %`:""}</div>
+    ${(z.items||[]).map(zGauge).join("")}
+    <div class="sub-h" style="font-size:12px;font-weight:400">Yards (closest storey outline to the lot line)</div>${yards||"<div class='hint'>—</div>"}
+    <div class="sub-h" style="font-size:12px;font-weight:400">Permitted uses</div>${uses||"<div class='hint'>—</div>"}
+    ${(z.notes||[]).length?`<details><summary class="hint" style="cursor:pointer">Schedule notes (${z.notes.length})</summary>${z.notes.map(n=>`<div class="note">${esc(n)}</div>`).join("")}</details>`:""}
+  </div>`;
+}
 function drawResults(){
-  if(!results) return; let h="";
+  if(!results) return; let h=zoningHtml();
   for(const [blk,s] of Object.entries(results.summary)){
     const hr=results.headroom[blk]; const faces=Object.entries(results.faces).filter(([k,v])=>v.block===blk);
     const worst=(v)=>v.bands.reduce((a,b)=> (b.permitted-b.actual)<(a.permitted-a.actual)?b:a);
@@ -567,9 +638,9 @@ function drawResults(){
       <div class="kv"><span class="k">Major occupancies</span><span>${(s.majors||[]).map(m=>`<span class="chip" style="background:${OCC_COLOR[m]}22;color:${OCC_COLOR[m]}">${m}</span>`).join(" ")}</span>
         <span class="k">Height · area</span><span class="mono">${s.storeys} storeys · ${fmt(s.height)} m to top floor · ${fmt(s.area)} m²</span>
         <span class="k">Construction</span><span>${s.construction||"—"}</span><span class="k">Floors</span><span>${s.floors||"—"}</span></div>
-      ${hr?`<div class="sub-h" style="font-size:12px;font-weight:500">Headroom under ${hr.article} — <span style="color:var(--ink2);font-weight:400">${hr.title}</span></div>${hr.items.map(gauge).join("")}
+      ${hr?`<div class="sub-h" style="font-size:12px;font-weight:400">Headroom under ${hr.article} — <span style="color:var(--ink2);font-weight:300">${hr.title}</span></div>${hr.items.map(gauge).join("")}
       <div class="hint">One more storey → ${hr.if_one_more_storey?`<span class="mono">${hr.if_one_more_storey}</span>`:"<b>no qualifying article</b>"}. Qualifying now: ${hr.qualifying.map(q=>`<span class="mono">${q}</span>`).join(", ")}.</div>`:""}
-      <div class="sub-h" style="font-size:12px;font-weight:500">Exposing faces (3.2.3)</div>
+      <div class="sub-h" style="font-size:12px;font-weight:400">Exposing faces (3.2.3)</div>
       ${faces.map(([k,v])=>{const w=worst(v); const ok=v.bands.every(b=>b.ok); return `<div class="face"><span class="nm">${esc(k.replace(blk+" · ",""))}</span><span class="mono">LD ${v.ld} m · <span class="chip ${ok?"ok":"no"}">${fmt(w.actual)}% / ${fmt(w.permitted)}% permitted</span></span><span class="req">${w.frr_min?`wall FRR ≥ ${w.frr_min} min · ${w.construction} · ${w.cladding} cladding`:"no exposing-face requirement"}</span></div>`;}).join("")}
       ${targetsHtml(blk)}
     </div>`;
@@ -580,7 +651,8 @@ function drawResults(){
   const notes=((results.building||{}).notes||[]).slice(1);
   h+=`<div class="card"><h3>Flags <span class="sp"></span><span class="chip ${flags.length?"no":"ok"}">${flags.length}</span></h3>${flags.map(([b,f])=>`<div class="flag ${/confirm|Confirm/.test(f)?"info":""}"><span class="mono" style="color:var(--mut)">${esc(b)}</span> ${esc(f)}</div>`).join("")||"<div class='hint'>none</div>"}${notes.map(n=>`<div class="note">${esc(n)}</div>`).join("")}</div>`;
   $("#results").innerHTML=h;
-  $("#resBadge").innerHTML=Object.entries(results.summary).map(([b,s])=>`<span class="mono">${esc(b)} ${esc(s.article||"—")}</span>`).join(" · ")+` · <span class="chip ${flags.length?"no":"ok"}">${flags.length} flag${flags.length===1?"":"s"}</span>`;
+  const z=results.zoning; const zb=z&&z.status!=="unknown"?`<span class="chip ${z.status==="exceeds"?"no":z.status==="outright"?"ok":""}" ${/conditional|toa/.test(z.status)?'style="background:var(--warn-soft);color:var(--warn)"':""}>${esc(z.district)} ${z.status==="exceeds"?"over":z.status==="outright"?"ok":z.status}</span> · `:"";
+  $("#resBadge").innerHTML=zb+Object.entries(results.summary).map(([b,s])=>`<span class="mono">${esc(b)} ${esc(s.article||"—")}</span>`).join(" · ")+` · <span class="chip ${flags.length?"no":"ok"}">${flags.length} flag${flags.length===1?"":"s"}</span>`;
 }
 
 // ------------------------------------------------------------------ library
@@ -652,6 +724,7 @@ function showSummary(sp, r, name){
   const flags=[...new Map(ds.flatMap(d=>d.flags.map(f=>[f,(d.block||"site")]))).entries()];
   const notes=((r.building||{}).notes||[]);
   const html=`<div class="sumhead"><div><h2>${esc(sp.project_name)} — Building Code Analysis <span class="mono" style="font-size:12px;color:var(--mut)">${esc(name)}</span></h2><div class="hint">${esc(ENGINE_LABEL)} · ${sp.sprinklered?"sprinklered throughout":"not sprinklered"} · generated ${new Date().toISOString().slice(0,10)} · DRAFT for a registered professional's review — not a compliance determination. Massing-stage inputs: glazing ratios assumed, one occupancy per storey.</div></div><div>${typeof apiSummaryXlsx==="function"?`<button class="sm pri" id="btnSumXlsx">Export to Excel</button> `:""}<button class="sm" onclick="window.print()">Print</button> <button class="sm" onclick="document.getElementById('dlgSum').close()">Close</button></div></div>
+    ${sec("0","Zoning — district schedule limits (Zoning and Development By-law No. 3575)",ds.filter(d=>d.key.startsWith("site.zoning")),"Permitted uses, height, storeys, FSR, site coverage and yards against the lot's district: outright / conditional / exceeds. Not a zoning determination — FSR exclusions, base surface and area-plan overlays are not modelled.")}
     ${sec("1","Building classification — major occupancies",ds.filter(d=>d.key.endsWith("major_occupancies")))}
     ${sec("2","Grade, first storey, building height and area",ds.filter(d=>["first_storey","basements","building_height_storeys","height_to_top_floor_m","building_area_m2"].includes(k(d))||d.key==="site.grade_m"))}
     ${sec("3","Governing article, Subsection 3.2.2",ds.filter(d=>k(d)==="article_candidates"||k(d)==="article"))}
@@ -664,7 +737,7 @@ function showSummary(sp, r, name){
     ${sec("B","Spatial separation by storey band",ds.filter(d=>k(d)==="face"&&!d.key.endsWith("summary")))}
     <section><h3><span class="n">⚠</span>Reviewer flags (${flags.length})</h3><ul class="fl">${flags.map(([f,b])=>`<li><span class="mono" style="color:var(--mut)">${esc(b)}</span> ${esc(f)}</li>`).join("")||"<li>none</li>"}</ul></section>
     <section><h3><span class="n">·</span>Model notes</h3><ul class="fl">${notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul></section>
-    <section><h3><span class="n">·</span>Not covered by this draft</h3><ul class="fl"><li>Egress layout — exit locations, dead ends, access to exit (3.3, 3.4.2.3–.4); only count, travel limit and width targets are computed</li><li>Washroom accessibility layout (3.8.3) — fixture counts only</li><li>Fire alarm, standpipe, sprinkler design (3.2.4, 3.2.5); firefighting access (3.2.5.4–.5)</li><li>High building (3.2.6); interior finishes, fire blocks (3.1.5, 3.1.11–.12); mass-timber limits (3.1.6, 3.2.2.93)</li><li>Energy (Part 10) and accessibility (3.8)</li></ul></section>`;
+    <section><h3><span class="n">·</span>Not covered by this draft</h3><ul class="fl"><li>Egress layout — exit locations, dead ends, access to exit (3.3, 3.4.2.3–.4); only count, travel limit and width targets are computed</li><li>Washroom accessibility layout (3.8.3) — fixture counts only</li><li>Fire alarm, standpipe, sprinkler design (3.2.4, 3.2.5); firefighting access (3.2.5.4–.5)</li><li>High building (3.2.6); interior finishes, fire blocks (3.1.5, 3.1.11–.12); mass-timber limits (3.1.6, 3.2.2.93)</li><li>Energy (Part 10) and accessibility (3.8)</li><li>Zoning: FSR exclusions (below-grade parking, balconies, amenity), the base-surface height datum, view cones, heritage and area-plan overlays, parking and loading (Parking By-law), and CD-1 limits unless entered</li></ul></section>`;
   $("#dlgSum .sumbody").innerHTML=html; $("#dlgSum").showModal();
   const bx=$("#btnSumXlsx"); if(bx) bx.onclick=async()=>{ bx.disabled=true; bx.textContent="Building…"; try{ await apiSummaryXlsx(sp,name); toast("Excel workbook downloaded"); }catch(e){ toast("export failed: "+String(e.message||e).slice(0,120)); } finally{ bx.disabled=false; bx.textContent="Export to Excel"; } };
 }

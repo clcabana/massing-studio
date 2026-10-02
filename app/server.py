@@ -36,7 +36,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "data" / "projects")]
 
 from codesheet.massing import MassingSpec, analyze_massing, to_building_model     # noqa: E402
-from codesheet import sheet, xlsx_sheet                                           # noqa: E402
+from codesheet import sheet, xlsx_sheet, zoning, height_area                      # noqa: E402
 from app import parcels as parcels_mod                                            # noqa: E402
 try:
     from codesheet import rhino_io                                                # noqa: E402
@@ -120,7 +120,21 @@ def save_iteration(req: SaveRequest):
 
 
 def _sheet_data(spec: MassingSpec) -> sheet.SheetData:
-    return sheet.run_all(to_building_model(spec), chosen=spec.chosen_articles or None)
+    b = to_building_model(spec)
+    zd, _ = zoning.analyze(spec, b, height_area.analyze(b))
+    return sheet.run_all(b, chosen=spec.chosen_articles or None, zoning=zd)
+
+
+@app.get("/api/zoning")
+def zoning_table():
+    """The district table the Lot panel offers (codes, labels, limits, notes) and the TOA tiers."""
+    return zoning_public()
+
+
+def zoning_public() -> dict:
+    D = zoning.DATA
+    return {"edition": D["edition"], "as_of": D["as_of"], "source_url": D["source_url"], "review_note": D["review_note"],
+            "districts": D["districts"], "aliases": D["aliases"], "alias_note": D["alias_note"], "toa": D["toa"], "use_classes": D["use_classes"]}
 
 
 XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -208,9 +222,10 @@ def parcel_lot(req: LotRequest):
     res = parcels_mod.parcel_to_lot(req.parcel, req.streets, req.lanes, req.zoning, req.grade_m)
     if req.context:
         try:
-            res.update(parcels_mod.site_context(res["frame"], res["lot"]["polygon"], req.parcels, req.streets, fixture_origin=req.parcel.get("origin") if req.parcel.get("fixture") else None))
+            res.update(parcels_mod.site_context(res["frame"], res["lot"]["polygon"], req.parcels, req.streets, lanes=req.lanes,
+                                                fixture_origin=req.parcel.get("origin") if req.parcel.get("fixture") else None))
         except Exception as e:
-            res["context_warning"] = f"Neighbours, trees and street names could not be loaded from Open Data: {str(e)[:160]}"
+            res["context_warning"] = f"Neighbours, trees, streets and sidewalks could not be loaded from Open Data: {str(e)[:160]}"
     return res
 
 
@@ -344,7 +359,10 @@ def example_demo():
     C, A2 = "C", "A2"
     return {
         "project_name": "Courtyard Commons (example)",
-        "lot": {"width_m": 60.0, "depth_m": 60.0, "grade_m": 10.0,
+        "lot": {"width_m": 60.0, "depth_m": 60.0, "grade_m": 10.0, "zoning": "CD-1",
+                "zoning_rules": {"district": "CD-1", "label": "Comprehensive Development (synthetic)", "uses": {"dwelling": "outright", "assembly": "outright", "parking": "outright"},
+                                 "height_m": 22.0, "max_storeys": 6, "fsr": 4.0, "coverage_pct": 70.0, "front_m": 3.0, "side_m": 3.0, "rear_m": 3.0,
+                                 "designer_edited": True, "source": "synthetic CD-1 limits for the worked example"},
                 "edges": {"south": {"kind": "street", "row_width_m": 34.0}, "west": {"kind": "street", "row_width_m": 40.0},
                           "east": {"kind": "neighbour", "row_width_m": 0}, "north": {"kind": "neighbour", "row_width_m": 0}}},
         "sprinklered": True, "streets_faced": 2,

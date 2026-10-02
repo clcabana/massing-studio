@@ -19,7 +19,7 @@ REPO_URL = "https://github.com/clcabana/massing-studio"
 
 def pages_site(out_dir: pathlib.Path) -> pathlib.Path:
     p = build_parts(lib_fallback="this browser only (localStorage)")
-    h1 = '<h1>Massing<br>Studio<small>VBBL 2025</small></h1>'
+    h1 = '<h1>Massing<br>Studio</h1>'
     body = p["body"].replace(
         h1, f'{h1}<a class="repo" href="{REPO_URL}" target="_blank" rel="noopener" title="Source on GitHub">source</a>', 1)
     assert 'class="repo"' in body
@@ -29,7 +29,7 @@ def pages_site(out_dir: pathlib.Path) -> pathlib.Path:
 <meta name="description" content="Draw a building massing on a Vancouver lot and watch its Part 3 code analysis (VBBL 2025) update live: building area, storeys, 3.2.2 article, spatial separation, occupant load, exits and washrooms. A draft for a registered professional's review.">
 {FONTS}
 {p["head_css"]}
-<style>header a.repo{{font:500 11px "IBM Plex Mono",monospace;color:var(--mut);text-decoration:none;border:1px solid var(--rule);border-radius:3px;padding:2px 6px}} header a.repo:hover{{color:var(--ink);border-color:var(--ink)}}</style>
+<style>header a.repo{{font:400 11px "IBM Plex Mono",monospace;color:var(--mut);text-decoration:none;border:1px solid var(--rule);border-radius:3px;padding:2px 6px}} header a.repo:hover{{color:var(--ink);border-color:var(--ink)}}</style>
 </head>
 <body>
 {body}

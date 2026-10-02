@@ -28,7 +28,9 @@ Built in the UBC M.Arch course ARCH 540 (AI Workflows) as a Claude project, then
    and then **+ block…** to add a building from a preset.
 3. Drag a corner or a wall tag in the **Plan** panel (lower left), or change storeys, setbacks and
    glazing in the **Blocks** dropdown (right). The **Code check** dropdown re-runs on every change;
-   its header shows the governing article per block and the flag count.
+   its header shows the zoning status, the governing article per block and the flag count. The
+   **Lot** dropdown holds the zoning district and its limits (height, storeys, FSR, coverage,
+   yards, Transit-Oriented Area tier); edit any figure to override the schedule.
 4. **Code summary** (top right) opens the printable sheet. **Save iteration…** keeps the massing in
    this browser's localStorage so you can reopen and compare it later.
 
@@ -93,6 +95,26 @@ The rules actually evaluated, with the clause each one reads:
 | Water closets, lavatories, urinal and unisex alternatives | 3.7.2.2 Tables -A/-B/-C, 3.7.2.3 | 317–319 |
 | Gender-neutral washroom count (Vancouver amendment) | 3.7.2.9 | 320 |
 
+**Zoning and Development By-law No. 3575** (City of Vancouver), district schedules. The lot's
+district (read from the Open Data zoning layer, or picked in the Lot panel) sets the limits the
+massing is checked against, with three tiers: within the **outright** limit, within the
+**conditional** maximum the Director of Planning may approve, or **exceeds** (rezoning). Encoded in
+[data/zoning/vancouver/districts.json](data/zoning/vancouver/districts.json) with the schedule
+section each figure comes from and a date; figures that could not be verified against the current
+schedule text are listed there as `unverified` and come out as flags. Every limit can be overridden
+in the Lot panel (a CD-1 by-law, an area plan), and the override is labelled as the designer's.
+
+| What the tool reports | Schedule section | Districts encoded |
+|---|---|---|
+| Permitted uses, from each block's occupancy groups (outright / conditional / not listed) | §2–3 | R1-1, RT-7, RT-8, RT-10, RM-1, RM-4 (RM-4N), C-1, C-2 (C-2B/C/C1), CD-1; RS-* read as R1-1 |
+| Height of the highest roof above grade; parapet and service penthouse noted (§10.1.1) | §4.3 | |
+| Storeys, where the schedule caps them (C-2: 4, 6 for secured rental; R1-1: 3) | §4.3 | |
+| Floor space ratio, gross above-grade floor area ÷ site area | §4.7 | |
+| Site coverage, largest footprint of each block ÷ site area | §4.8 | |
+| Front, side, flanking and rear yards, closest storey outline to each lot line | §4.4–4.6 | |
+| Minimum site area and frontage (R1-1 multiplex tiers, RM-4 550 m²) | §4.1 | |
+| Transit-Oriented Area minimums the City may not refuse (Bill 47: 8/12/20 storeys, FSR 3/4/5 by distance) | TOA designation | optional tier, chosen in the Lot panel |
+
 The by-law PDFs are **not** in the repository; the extracted JSON is enough to run everything. The
 clause links in the HTML sheet open the PDF only when it sits beside the sheet; the Excel workbook
 cites the clause and page in their own columns.
@@ -126,8 +148,13 @@ Glazing is 25 % on every North face and 35 % on every South face.
 - **Occupancy separation.** North L1/L2, A2 below C above: **2 h** (Table 3.1.3.1 Note (3)).
 - **Targets.** North 184 persons, South 180; 2 exits per storey, travel ≤ 45 m, stairs sized at
   1,100 mm each, doors 850 mm; one water closet per dwelling unit.
-- **6 flags**, including "Group A2 present, admitted within 3.2.2.51 per Sentence (5)(a) below the
-  3rd storey; confirm the storey condition" and the two opening-area exceedances.
+- **Zoning** (the example carries synthetic CD-1 limits, entered as a designer override): FSR 3.72 of
+  4.0, site coverage 66.7 % of 70 %, roof 20 m of 22 m, 6 of 6 storeys, every yard 5 m against a 3 m
+  minimum: within the outright limits. Switch the Lot panel to RM-4 and the same massing reads
+  "exceeds" on height (10.7 m) and FSR (1.45 conditional).
+- **10 flags**, including "Group A2 present, admitted within 3.2.2.51 per Sentence (5)(a) below the
+  3rd storey; confirm the storey condition", the two opening-area exceedances, and the zoning
+  caveats (gross FSR, 4.5 m ground floors that some schedules count twice, the flanking yard).
 
 Drag the South block away from the North block and the permitted percentage on the two
 imaginary-line faces rises with the limiting distance, until the red bands clear.
@@ -158,6 +185,12 @@ clauses, so it can be driven from a notebook, a script or another UI.
 - Lots picked from the map have their street / lane / neighbour edge kinds inferred geometrically.
   Check them in the Lot panel; a corner cut or an odd parcel can fool it. Neighbouring buildings and
   trees are context for the 3D view only and do not enter the analysis.
+- Zoning is a draft check, not a determination. FSR is gross floor area from the storey outlines
+  (no exclusions for below-grade parking, balconies or amenity, so it reads high); height is from
+  the massing grade, not the zoning base surface; view cones, heritage, area plans (Broadway,
+  Villages) and the Parking By-law are not applied. Yards for RT-7, RT-8, RT-10 and RM-1 and the
+  residential rear setbacks of C-2 are not encoded: enter them. Verify every figure against the
+  current district schedule, which the tool names; flagged figures were transcribed but not checked.
 - Vancouver-specific amendments beyond 3.2.2.18.(3) and 3.7.2.9 are not separately flagged. The
   BCBC 2024 edition key exists but no text has been extracted for it.
 
@@ -167,13 +200,14 @@ clauses, so it can be driven from a notebook, a script or another UI.
     app/            FastAPI server, the UI (static/index.html), engine.js (the JavaScript port),
                     build_pages.py (this site) and build_artifact.py (the Claude artifact)
     data/bylaw/     VBBL 2025 Part 3 articles and Table 3.2.3.1-B/-C extracted to JSON
+    data/zoning/    Vancouver Zoning and Development By-law district schedules (height, FSR, coverage, yards, uses)
     data/projects/  two synthetic projects: Courtyard Commons (the golden project) and a lane mixed-use lot
     tests/          hand-worked golden values, tables, occupant-load and egress targets, JS ↔ Python parity
     viz/            plotly sections, elevations and 3D massing for the printed sheet
     docs/           the README screenshot
 
 ```bash
-python -m pytest -q                        # the JS parity tests need node on the PATH
+python -m pytest -q                        # the JS parity tests run under node, or Playwright's Chromium when node is absent
 python app/build_pages.py                  # → out/site/index.html
 ```
 

@@ -55,7 +55,10 @@ NOT_COVERED = [
 ]
 
 
-def run_all(b: BuildingModel, chosen: Optional[dict[str, str]] = None, edition: str = "vbbl-2025") -> SheetData:
+def run_all(b: BuildingModel, chosen: Optional[dict[str, str]] = None, edition: str = "vbbl-2025",
+            zoning: Optional[list[Determination]] = None) -> SheetData:
+    """`zoning`: the Zoning By-law determinations from codesheet.zoning.analyze (needs the lot, so the
+    massing layer computes them and passes them in); None leaves the zoning section out."""
     law = Bylaw(edition)
     hd = height_area.analyze(b, law)
     od = occupancy.analyze(b, law)
@@ -83,7 +86,9 @@ def run_all(b: BuildingModel, chosen: Optional[dict[str, str]] = None, edition: 
             ol_rows.append(Determination(key=d.key + "." + r["zone"], label=f"{d.label.split('— ')[-1]} — {r['zone']}", value=r["net_load"], unit="persons",
                                          block=d.block, clauses=d.clauses, because=basis))
 
-    sections = [
+    sections = ([Section("0", "Zoning — district schedule limits (Zoning and Development By-law No. 3575)", zoning,
+                         "Permitted uses, height, storeys, FSR, site coverage and yards against the lot's district. Outright / conditional / exceeds. Not a zoning determination: FSR exclusions, base surface and area-plan overlays are not modelled.")]
+                if zoning is not None else []) + [
         Section("1", "Building classification — major occupancies", majors, "Per block. Zone-level classification in Appendix A."),
         Section("2", "Grade, first storey, building height and area", hd),
         Section("3", "Governing article, Subsection 3.2.2", art_main),
@@ -145,8 +150,8 @@ def render_html(sd: SheetData, edition: str = "vbbl-2025", sheet_no: str = "A0.0
                 f"<table><colgroup><col class='c-blk'><col class='c-lab'><col class='c-val'><col class='c-why'><col class='c-ref'></colgroup><thead><tr><th>Block</th><th>Item</th><th>Value</th><th>Basis</th><th>Clause</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>")
 
     body_secs = [s for s in sd.sections if not s.number.startswith(("A", "B", "C"))]
-    col1 = "".join(section_html(s) for s in body_secs if s.number in ("1", "2", "7"))
-    col2 = "".join(section_html(s) for s in body_secs if s.number not in ("1", "2", "7"))
+    col1 = "".join(section_html(s) for s in body_secs if s.number in ("0", "1", "2", "7"))
+    col2 = "".join(section_html(s) for s in body_secs if s.number not in ("0", "1", "2", "7"))
     appx = "".join(section_html(s) for s in sd.sections if s.number.startswith(("A", "B", "C")))
     flags = "".join(f"<li><span class='where'>{html.escape(w)}</span> {html.escape(t)}</li>" for w, t in sd.flags)
     ncov = "".join(f"<li>{html.escape(t)}</li>" for t in sd.not_covered)

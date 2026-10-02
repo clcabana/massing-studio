@@ -60,13 +60,21 @@ async function siteWizard(){
     {id:"frontRow", title:"Right-of-way width of the front street", help:"Limiting distance is measured to the street centreline, so this matters for the front face.", type:"choice", default:20,
       options:Object.entries(P.row_widths).filter(([k])=>k!=="lane").map(([k,v])=>({label:k, desc:`${v} m`, value:v})), custom:{label:"or enter metres", step:0.5}},
     {id:"lane", title:"Is there a lane at the rear?", type:"choice", default:"yes", options:[{label:"Yes — 6 m lane", value:"yes"},{label:"No — rear neighbour", value:"no"}], when:x=>!(x.streets||[]).includes("north")},
+    {id:"zone", title:"Zoning district", help:"Sets the height, FSR, site coverage, yard and use limits the Code check reads against the massing (Zoning and Development By-law No. 3575). Editable afterwards in the Lot panel; a site picked from the map brings its own.", type:"choice", default:"RM-4", options:[
+      {label:"R1-1 — Residential Inclusive (houses, duplexes, multiplexes)", desc:"11.5 m · 3 storeys · FSR 0.7–1.0 · yards 4.9 / 1.2 / 10.7 m", value:"R1-1"},
+      {label:"RT-7 — Two-family (Kitsilano)", desc:"10.7 m · 3 storeys · FSR 0.6 (multiplex 1.0) · coverage 45 %", value:"RT-7"},
+      {label:"RM-4 — Multiple dwelling (apartment)", desc:"10.7 m outright · FSR 0.75–1.45 · yards 6.1 / 2.1 / 10.7 m · site ≥ 550 m²", value:"RM-4"},
+      {label:"C-1 — Local commercial", desc:"9.2–10.7 m · FSR 1.2 · residential above or behind commercial", value:"C-1"},
+      {label:"C-2 — Arterial commercial / mixed-use", desc:"13.8 m · 4 storeys (6 secured rental) · FSR 3.0, residential ≤ 2.5", value:"C-2"},
+      {label:"CD-1 — Comprehensive Development (site-specific by-law)", desc:"enter the by-law's limits in the Lot panel", value:"CD-1"},
+      {label:"Don't know yet", desc:"zoning is not checked until a district is set", value:"none"}]},
     {id:"grade", title:"Grade elevation", help:"Lowest average finished ground level adjoining the walls (Div. A). Any datum is fine; storeys are counted from it.", type:"number", default:10, unit:"m"},
     {id:"spr", title:"Sprinklered throughout?", help:"VBBL 3.2.2.18.(3) requires sprinklers in all new buildings; choose no only for an existing-building study.", type:"choice", default:"yes", options:[{label:"Yes", value:"yes"},{label:"No", value:"no"}]},
     {id:"name", title:"Project name", type:"text", default:"New site"},
   ]);
   if(!a) return;
   spec=newSpec(); spec.blocks=[]; spec.project_name=a.name||"New site"; spec.sprinklered=a.spr!=="no";
-  spec.lot={width_m:a.frontage, depth_m:a.depth, grade_m:a.grade, polygon:null, edge_kinds:null, source:"described",
+  spec.lot={width_m:a.frontage, depth_m:a.depth, grade_m:a.grade, polygon:null, edge_kinds:null, source:"described", zoning:a.zone&&a.zone!=="none"?a.zone:null, zoning_rules:null,
     edges:{south:{kind:"neighbour",row_width_m:0},north:{kind:"neighbour",row_width_m:0},east:{kind:"neighbour",row_width_m:0},west:{kind:"neighbour",row_width_m:0}}};
   for(const s of a.streets||[]) spec.lot.edges[s]={kind:"street", row_width_m: s==="south"?a.frontRow:20};
   if(a.lane==="yes" && !(a.streets||[]).includes("north")) spec.lot.edges.north={kind:"lane", row_width_m:6};
@@ -76,10 +84,10 @@ async function siteWizard(){
 
 function applyLot(lotResp, a0){
   spec=newSpec(); spec.blocks=[]; spec.lot=lotResp.lot; spec.project_name=lotResp.lot.address||"Picked site";
-  // site context in the lot's frame: neighbours (with heights), public trees, street names
-  spec.context=lotResp.context||[]; spec.trees=lotResp.trees||[]; spec.streets=lotResp.streets||[];
+  // site context in the lot's frame: neighbours (with heights), public trees, street names, block outlines / lanes / sidewalks
+  spec.context=lotResp.context||[]; spec.trees=lotResp.trees||[]; spec.streets=lotResp.streets||[]; spec.ground=lotResp.ground||[];
   if(lotResp.context_warning) toast(lotResp.context_warning);
-  else if(spec.context.length||spec.trees.length) toast(`${spec.context.length} neighbouring buildings, ${spec.trees.length} trees and ${new Set(spec.streets.map(s=>s.name)).size} street names loaded`);
+  else if(spec.context.length||spec.trees.length){ const nw=spec.ground.filter(g=>g.kind==="sidewalk").length; toast(`${spec.context.length} neighbouring buildings, ${spec.trees.length} trees, ${new Set(spec.streets.map(s=>s.name)).size} street names${nw?` and ${nw} sidewalks`:""} loaded`); }
   if(!spec.lot.edges) spec.lot.edges={south:{kind:"neighbour",row_width_m:0},north:{kind:"neighbour",row_width_m:0},east:{kind:"neighbour",row_width_m:0},west:{kind:"neighbour",row_width_m:0}};
   sel=0; changed(true);
 }
@@ -172,8 +180,8 @@ function mapPicker(){
       const seq=++fetchSeq; status.textContent="loading parcels…";
       try{ const r=await fetch(`/api/parcels?lat=${c.lat}&lon=${c.lng}&radius=220`); if(seq!==fetchSeq) return; if(!r.ok){ status.textContent=(await r.json()).detail||"request failed"; return; }
         const data=await r.json(); if(seq!==fetchSeq) return; mapData=data; lastFetch=c; mapLayers.clearLayers();
-        mapData.streets.forEach(s=>L.polyline(s.line.map(p=>[p[1],p[0]]),{color:"#c8352b",weight:2,opacity:.6}).addTo(mapLayers).bindTooltip(s.name||"street"));
-        mapData.lanes.forEach(s=>L.polyline(s.line.map(p=>[p[1],p[0]]),{color:"#b26b00",weight:2,dashArray:"4 4",opacity:.8}).addTo(mapLayers).bindTooltip("lane"));
+        mapData.streets.forEach(s=>L.polyline(s.line.map(p=>[p[1],p[0]]),{color:"#c0564d",weight:2,opacity:.6}).addTo(mapLayers).bindTooltip(s.name||"street"));
+        mapData.lanes.forEach(s=>L.polyline(s.line.map(p=>[p[1],p[0]]),{color:"#b7853f",weight:2,dashArray:"4 4",opacity:.8}).addTo(mapLayers).bindTooltip("lane"));
         mapData.parcels.forEach(p=>{ const poly=L.polygon(p.ring.map(q=>[q[1],q[0]]),{color:"#1d4f9c",weight:1,fillOpacity:.12}).addTo(mapLayers);
           poly.bindTooltip(p.address||p.id); poly.on("mouseover",()=>poly.setStyle({fillOpacity:.35})); poly.on("mouseout",()=>poly.setStyle({fillOpacity:.12}));
           poly.on("click",async()=>{ status.textContent="reading lot…"; const rr=await fetch("/api/parcels/lot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({parcel:p,streets:mapData.streets,lanes:mapData.lanes,zoning:mapData.zoning,parcels:mapData.parcels,grade_m:10})});

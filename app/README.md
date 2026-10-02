@@ -139,7 +139,18 @@ footprint edge to the lot boundary, so angled and irregular parcels are handled.
   *beds / units* for Group C and a *deduction %* for other uses. Validated row for row against a
   hand-worked occupant-load table (tests/test_courtyard_commons.py).
 
-Every line in the saved summary cites its clause and page.
+* **zoning** (v1.3) — the lot's district (from the Open Data zoning layer when the site is picked on the
+  map, or chosen in the site wizard / Lot panel) against its Zoning and Development By-law schedule:
+  permitted uses per block from the occupancy groups, height of the highest roof (parapet and service
+  penthouse noted), storeys where capped, FSR (gross above-grade floor area ÷ site area), site coverage,
+  front / side / flanking / rear yards measured from every storey outline to the lot line, minimum site
+  area and frontage. Three tiers — outright, conditional (Director of Planning) and exceeds — plus an
+  optional Transit-Oriented Area tier (Bill 47 minimums). The Lot panel lists the district's limits;
+  edit any to override (CD-1 by-laws have no table entry and are entered this way), and the plan draws
+  the required yards as a dashed envelope when no setbacks are set. Table: `data/zoning/vancouver/districts.json`,
+  rule module `codesheet/zoning.py`, served to the UI by `/api/zoning`.
+
+Every line in the saved summary cites its clause and page (zoning lines cite the district schedule section).
 
 ## Code summary and Excel export
 
@@ -172,4 +183,8 @@ it as a workbook (`/api/summary.xlsx`), and every saved iteration gets the same 
 * Glazing is a ratio per face, not a window schedule.
 * Targets are targets: exit *locations*, dead ends, access to exit (3.3, 3.4.2.3–.4) and washroom
   accessibility layout (3.8.3) are not assessed. Bedrooms are estimated at 1 per 35 m² until entered.
+* Zoning: FSR has no exclusions (below-grade parking, balconies, amenity), height is from the massing grade
+  rather than the zoning base surface, and overlays (Broadway Plan, Villages, view cones, heritage) are not
+  applied. District figures marked `unverified` in the table come out as flags; several schedules have no
+  yards encoded. Verify against the current schedule the tool names.
 * This is a DRAFT generator for a registered professional's review, not a compliance determination.

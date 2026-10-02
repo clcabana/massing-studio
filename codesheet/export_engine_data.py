@@ -10,7 +10,7 @@ import json, pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT)]
 
-from codesheet import articles, table_3231, separations, targets
+from codesheet import articles, table_3231, separations, targets, zoning
 from codesheet.determinations import Bylaw
 from codesheet.occupancy import TABLE_3121
 
@@ -52,6 +52,7 @@ def main():
         "table_3237": {"rows": [[list(b), frr, cons, clad] for b, frr, cons, clad in table_3231.TABLE_3237_ABCDF3], "page": table_3231.PAGE_3237},
         "table_3131": {"map": sep, "page": separations.PAGE_3131},
         "subsidiary_fraction": 0.10,
+        "zoning": zoning.DATA,
         "targets": {
             "ol_rules": [[pat, f, label] for pat, f, label in targets.OL_RULES],
             "dwelling_re": targets.DWELLING_RE.pattern,

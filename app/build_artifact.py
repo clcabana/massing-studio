@@ -68,8 +68,8 @@ $("#btnCompare").onclick=async()=>{ const rows=(await Promise.all(compareSel.map
   for(const r of rows){ h+=`<tr><td><b>${esc(r.name)}</b><br><span class="sub">${esc(r.note||"")}</span></td>${blocks.map(b=>{const s=(r.summary||{})[b]; if(!s) return "<td>—</td>"; const hr=((r.headroom||{})[b]||{}).items||[]; const a=hr.find(i=>i.what==="building area"); const tg=((r.targets||{})[b]); return `<td class="mono">${s.storeys} st · ${fmt(s.area)} m²<br>${s.article||"—"}<br>${a?`${fmt(a.headroom)} m² headroom`:""}${tg?`<br>${fmt(tg.total.net)} p. · ${tg.egress?tg.egress.exits+" stairs @ "+tg.egress.stair_each_mm+" mm":""}`:""}</td>`;}).join("")}<td>${r.flags}</td></tr>`; }
   $("#cmp").innerHTML=h+"</table>"; };'''
 
-FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600'
-         '&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Mono:wght@400;500&display=swap">')
+FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500'
+         '&family=IBM+Plex+Mono:wght@400;500&display=swap">')
 
 
 def build_parts(lib_fallback: str) -> dict:
@@ -88,6 +88,7 @@ def build_parts(lib_fallback: str) -> dict:
     scripts = cut(scripts, "// @@API-START", "// @@API-END", '''// in-page engine (server-less build)
 async function apiAnalyze(sp){ return CodesheetEngine.analyzeMassing(JSON.parse(JSON.stringify(sp)), ENGINE_DATA); }
 async function apiExample(){ return JSON.parse(JSON.stringify(EXAMPLE)); }
+async function apiZoning(){ return ENGINE_DATA.zoning; }
 const ENGINE_LABEL="VBBL 2025 · in-browser engine";''')
 
     # ---- library: browser-side ---------------------------------------------------------
