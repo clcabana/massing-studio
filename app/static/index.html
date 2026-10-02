@@ -3,9 +3,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="/vendor/leaflet.css">
 <style>
-:root{--paper:#f4f3ee;--sheet:#fff;--ink:#1e2126;--ink2:#4b5563;--mut:#7a8291;--rule:#d9d8d1;--mark:#c8352b;--mark-soft:#fbe9e7;--ok:#1d7a46;--ok-soft:#e3f3e9;--blue:#1d4f9c;--blue-soft:#e3eefc;--warn:#b26b00;--warn-soft:#fff3d6;--grid:#e8e6df;--sky:#eef0f3}
-:root[data-theme="dark"]{--paper:#12151a;--sheet:#1a1e25;--ink:#e6e8eb;--ink2:#b6bcc7;--mut:#8b93a1;--rule:#2b313b;--mark:#f0786d;--mark-soft:#3a2321;--ok:#5ec98a;--ok-soft:#1d3327;--blue:#8fb4f0;--blue-soft:#1f2f4a;--warn:#e0a437;--warn-soft:#3a2f14;--grid:#232830;--sky:#0f1318}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--paper:#12151a;--sheet:#1a1e25;--ink:#e6e8eb;--ink2:#b6bcc7;--mut:#8b93a1;--rule:#2b313b;--mark:#f0786d;--mark-soft:#3a2321;--ok:#5ec98a;--ok-soft:#1d3327;--blue:#8fb4f0;--blue-soft:#1f2f4a;--warn:#e0a437;--warn-soft:#3a2f14;--grid:#232830;--sky:#0f1318} }
+:root{--paper:#f4f3ee;--sheet:#fff;--ink:#1e2126;--ink2:#4b5563;--mut:#7a8291;--rule:#d9d8d1;--mark:#c8352b;--mark-soft:#fbe9e7;--ok:#1d7a46;--ok-soft:#e3f3e9;--blue:#1d4f9c;--blue-soft:#e3eefc;--warn:#b26b00;--warn-soft:#fff3d6;--grid:#e8e6df;--sky:#eef0f3;--sheet-a:rgba(255,255,255,.93)}
+:root[data-theme="dark"]{--paper:#12151a;--sheet:#1a1e25;--ink:#e6e8eb;--ink2:#b6bcc7;--mut:#8b93a1;--rule:#2b313b;--mark:#f0786d;--mark-soft:#3a2321;--ok:#5ec98a;--ok-soft:#1d3327;--blue:#8fb4f0;--blue-soft:#1f2f4a;--warn:#e0a437;--warn-soft:#3a2f14;--grid:#232830;--sky:#0f1318;--sheet-a:rgba(26,30,37,.93)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--paper:#12151a;--sheet:#1a1e25;--ink:#e6e8eb;--ink2:#b6bcc7;--mut:#8b93a1;--rule:#2b313b;--mark:#f0786d;--mark-soft:#3a2321;--ok:#5ec98a;--ok-soft:#1d3327;--blue:#8fb4f0;--blue-soft:#1f2f4a;--warn:#e0a437;--warn-soft:#3a2f14;--grid:#232830;--sky:#0f1318;--sheet-a:rgba(26,30,37,.93)} }
 *{box-sizing:border-box} html,body{height:100%;margin:0}
 body{background:var(--paper);color:var(--ink);font:13px/1.4 "IBM Plex Sans",system-ui,sans-serif;display:grid;grid-template-rows:auto 1fr;height:100vh;overflow:hidden;transition:background .25s,color .25s}
 .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
@@ -13,18 +13,30 @@ header{display:flex;align-items:center;gap:12px;padding:8px 14px;background:var(
 header h1{font:600 17px "IBM Plex Sans Condensed",sans-serif;margin:0;letter-spacing:.01em} header h1 small{font:500 10px "IBM Plex Mono",monospace;color:var(--mut);margin-left:6px;vertical-align:middle} header .sp{flex:1}
 header input{font:inherit;padding:4px 8px;border:1px solid var(--rule);border-radius:3px;min-width:220px;background:var(--sheet);color:var(--ink)}
 button{font:inherit;padding:5px 10px;border:1px solid var(--ink);background:var(--sheet);color:var(--ink);border-radius:3px;cursor:pointer;transition:background .15s} button:hover{background:var(--paper)} button.pri{background:var(--ink);color:var(--sheet)} button.pri:hover{opacity:.9} button.sm{padding:2px 7px;font-size:12px} button:disabled{opacity:.4;cursor:default} button.ghost{border-color:var(--rule);color:var(--ink2)}
-main{display:grid;grid-template-columns:minmax(380px,1.15fr) 350px minmax(380px,1fr);gap:0;min-height:0}
-.col{min-height:0;overflow:auto;border-right:1px solid var(--rule);background:var(--sheet)} .col:last-child{border-right:0;background:var(--paper)}
-.pane{padding:10px 12px;border-bottom:1px solid var(--rule)} .pane h2{font:600 11.5px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:0 0 8px;display:flex;align-items:center;gap:8px} .pane h2 .sp{flex:1}
-#plan{width:100%;aspect-ratio:1/1;max-height:56vh;display:block;background:var(--sheet);touch-action:none;user-select:none}
-#three{width:100%;height:380px;display:block;background:var(--sky);border-radius:3px;cursor:grab} #three:active{cursor:grabbing}
+main{display:grid;grid-template-columns:1fr 340px;gap:0;min-height:0}
+/* the stage: the 3D view fills it, the plan editor and the view controls float over it */
+.stage{position:relative;min-height:0;background:var(--sky);overflow:hidden}
+#three{position:absolute;inset:0;width:100%;height:100%;display:block;background:var(--sky);cursor:grab} #three:active{cursor:grabbing}
+#labels3d{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl3d{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:500 11px "IBM Plex Sans",sans-serif;color:var(--ink);background:var(--sheet-a);border:1px solid var(--rule);border-radius:999px;padding:1px 8px 1px 6px;box-shadow:0 1px 4px rgba(0,0,0,.08)} .lbl3d i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.ovl{position:absolute;background:var(--sheet-a);border:1px solid var(--rule);border-radius:4px;box-shadow:0 2px 12px rgba(0,0,0,.10);backdrop-filter:blur(3px)}
+.planBox{left:12px;bottom:12px;padding:6px 8px 8px} .planBox .bar{display:flex;align-items:center;gap:8px;font:600 11px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:5px;min-width:200px} .planBox .bar .sp{flex:1} .planBox .bar button{padding:0 5px;line-height:16px}
+#plan{width:340px;height:340px;max-width:calc(100vw - 400px);max-height:calc(100vh - 170px);display:block;background:var(--sheet);border:1px solid var(--rule);touch-action:none;user-select:none}
+.planBox.big #plan{width:580px;height:580px} .planBox.min #plan,.planBox.min .planHelp,.planBox.min .legend{display:none}
+.planHelp{max-width:340px} .planBox.big .planHelp{max-width:580px} .planHelp summary{cursor:pointer;color:var(--mut);font-size:11px;margin-top:5px;list-style:none} .planHelp summary::-webkit-details-marker{display:none} .planHelp summary:before{content:"▸ "} .planHelp[open] summary:before{content:"▾ "} .planHelp .hint{margin-top:3px}
+.viewBox{right:12px;top:12px;padding:0;font-size:11.5px;color:var(--ink2);min-width:0} .viewBox summary{cursor:pointer;list-style:none;padding:5px 10px;font:600 11px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)} .viewBox summary::-webkit-details-marker{display:none} .viewBox summary:before{content:"▸ "} .viewBox[open] summary:before{content:"▾ "} .viewBox .vb{padding:0 10px 8px;width:260px} .viewBox .vb label.status{display:block;margin:3px 0}
 .sun{display:grid;grid-template-columns:auto 1fr auto 1fr auto;gap:6px 8px;align-items:center;font-size:11.5px;color:var(--ink2);margin-top:6px} .sun input[type=range]{width:100%}
+/* the sidebar: every panel is a dropdown */
+.side{min-height:0;overflow:auto;border-left:1px solid var(--rule);background:var(--sheet)}
+details.pane{border-bottom:1px solid var(--rule)} details.pane>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:9px 12px;font:600 11.5px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);user-select:none} details.pane>summary::-webkit-details-marker{display:none}
+details.pane>summary:before{content:"▸";font-size:10px;width:10px;color:var(--mut);transition:transform .15s} details.pane[open]>summary:before{transform:rotate(90deg)} details.pane>summary .sp{flex:1} details.pane>summary:hover{background:var(--paper)} details.pane>summary .acts{display:flex;gap:4px;text-transform:none;letter-spacing:0} details.pane>summary .status{text-transform:none;letter-spacing:0;font-weight:400}
+details.pane>.body{padding:2px 12px 12px} details.pane>.body .card{margin:8px 0}
 .lotEdge{cursor:pointer} .lotEdge text{font:2.3px "IBM Plex Mono",monospace;fill:var(--ink2)} .lotEdge rect{fill:var(--sheet);stroke:var(--rule)}
 .lotSeg{stroke-width:.9} .lotSeg.street{stroke:#c8352b} .lotSeg.lane{stroke:#b26b00;stroke-dasharray:1.2 .6} .lotSeg.neighbour{stroke:var(--ink);stroke-dasharray:1.6 .8}
 .blk{fill:rgba(42,120,214,.16);stroke:var(--blue);stroke-width:1.2;cursor:move} .blk.sel{fill:rgba(42,120,214,.28);stroke-width:2} .blk.ghost{fill:none;stroke:var(--blue);stroke-width:.5;stroke-dasharray:1 .8;pointer-events:none;opacity:.7}
 .hole{fill:var(--sheet);stroke:var(--blue);stroke-width:1;stroke-dasharray:1.4 .7;cursor:move} .ctx{fill:rgba(128,128,128,.22);stroke:var(--mut);stroke-width:.7;cursor:move} .ctx.sel{stroke:var(--ink);stroke-width:1.2}
 .vtx{fill:var(--sheet);stroke:var(--blue);stroke-width:1.5;cursor:grab} .vtx:hover{fill:var(--blue)} .vtx.h{stroke-dasharray:.8 .5}
-.edgeLbl{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink2);pointer-events:none} .edgeH rect{fill:var(--sheet);stroke:var(--blue);stroke-width:.3} .edgeH text{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink)} .edgeH:hover rect{fill:var(--blue-soft);stroke-width:.5} .ctxLbl{font:2.2px "IBM Plex Sans",sans-serif;fill:var(--mut);pointer-events:none}
+.edgeLbl{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink2);pointer-events:none} .edgeH rect{fill:var(--sheet);stroke:var(--blue);stroke-width:.3} .edgeH text{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink)} .edgeH:hover rect{fill:var(--blue-soft);stroke-width:.5} .edgeH.h rect{stroke-dasharray:.8 .5} .ctxLbl{font:2.2px "IBM Plex Sans",sans-serif;fill:var(--mut);pointer-events:none}
 .field{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;margin:4px 0} .field label{color:var(--ink2)} .field input,.field select{font:inherit;padding:3px 6px;border:1px solid var(--rule);border-radius:3px;width:120px;text-align:right;background:var(--sheet);color:var(--ink)}
 .field select{text-align:left}
 .storey{display:grid;grid-template-columns:22px 58px 1fr 52px 48px 48px 22px;gap:4px;align-items:center;margin:3px 0} .storey input,.storey select{font:inherit;padding:2px 4px;border:1px solid var(--rule);border-radius:3px;width:100%;background:var(--sheet);color:var(--ink)}
@@ -62,7 +74,7 @@ table.sum{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixe
 table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:top;overflow-wrap:anywhere} table.sum td.blk{width:7%;color:var(--mut);font-size:10px;text-transform:uppercase} table.sum td.val{width:16%} table.sum td.why{width:44%;color:var(--ink2);font-size:11px} table.sum td.ref{width:17%}
 .cite{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--blue);background:var(--blue-soft);padding:0 5px;border-radius:3px;margin:1px 2px 1px 0} sup.fl{color:var(--mark)} ul.fl{margin:0;padding-left:16px;font-size:12px} ul.fl li{margin:2px 0}
 @media print{ body>*:not(#dlgSum){display:none!important} #dlgSum{position:static;border:0;max-height:none;width:auto} .sumhead button{display:none} }
-@media (max-width:900px){ body{height:auto;overflow:auto;display:block} main{display:block} .col{border-right:0;border-bottom:1px solid var(--rule)} header{flex-wrap:wrap} header input{min-width:160px;flex:1} #plan{max-height:none} }
+@media (max-width:900px){ body{height:auto;overflow:auto;display:block} main{display:block} .stage{height:72vh} .side{border-left:0;border-top:1px solid var(--rule)} header{flex-wrap:wrap} header input{min-width:160px;flex:1} #plan{width:260px;height:260px;max-width:calc(100vw - 60px)} .planBox.big #plan{width:min(580px,calc(100vw - 60px));height:min(580px,calc(100vw - 60px))} }
 </style></head>
 <body>
 <header>
@@ -79,53 +91,54 @@ table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:
   <button class="pri" id="btnSave">Save iteration…</button>
 </header>
 <main>
-  <div class="col">
-    <div class="pane">
-      <h2>Plan <span class="sp"></span><span class="legend"><span><i style="background:#2a78d6"></i>C</span><span><i style="background:#eb6834"></i>A2</span><span><i style="background:#e87ba4"></i>E</span><span><i style="background:#eda100"></i>D</span><span><i style="background:#1baf7a"></i>F3</span></span></h2>
-      <svg id="plan" viewBox="0 0 100 100"></svg>
-      <div class="hint">Drag a corner to reshape, drag a wall's length tag to push or pull that wall, drag a body to move, double-click an edge to add a corner, <kbd>Alt</kbd>-click a corner to remove it. Click a storey number in the Blocks panel to edit that storey's own outline. Click a lot edge label to cycle street / lane / neighbour. <kbd>⌘Z</kbd> undo.</div>
-    </div>
-    <div class="pane"><h2>3D <span class="sp"></span><label class="status"><input type="checkbox" id="chkShadows" checked> shadows</label><label class="status"><input type="checkbox" id="chkFaces" checked> face check</label></h2>
-      <canvas id="three"></canvas>
+  <div class="stage">
+    <canvas id="three"></canvas>
+    <div id="labels3d"></div>
+    <details class="ovl viewBox" id="viewBox"><summary>View</summary><div class="vb">
+      <label class="status"><input type="checkbox" id="chkLabels" checked> storey labels</label>
+      <label class="status"><input type="checkbox" id="chkShadows" checked> shadows</label>
+      <label class="status"><input type="checkbox" id="chkFaces" checked> face check (red: openings over the permitted %, amber: rated wall required)</label>
       <div class="sun"><span>Sun</span><input type="range" id="sunAz" min="0" max="360" value="215" title="azimuth"><span id="sunAzV" class="mono">215°</span><input type="range" id="sunAlt" min="5" max="85" value="48" title="altitude"><span id="sunAltV" class="mono">48°</span></div>
+      <div class="hint">Drag to orbit · right-drag or <kbd>Shift</kbd>-drag to pan · scroll to zoom · double-click to reset.</div>
+    </div></details>
+    <div class="ovl planBox" id="planBox">
+      <div class="bar">Plan <span class="legend"><span><i style="background:#2a78d6"></i>C</span><span><i style="background:#eb6834"></i>A2</span><span><i style="background:#e87ba4"></i>E</span><span><i style="background:#eda100"></i>D</span><span><i style="background:#1baf7a"></i>F3</span></span><span class="sp"></span><button class="sm ghost" id="planSize" title="Larger / smaller plan">⤢</button><button class="sm ghost" id="planMin" title="Hide / show the plan">▾</button></div>
+      <svg id="plan" viewBox="0 0 100 100"></svg>
+      <details class="planHelp"><summary>How to edit</summary>
+        <div class="hint">Drag a corner to reshape, drag a wall's length tag to push or pull that wall (courtyard walls too), drag a body to move, double-click an edge to add a corner, <kbd>Alt</kbd>-click a corner to remove it. Click a storey number in the Blocks panel to edit that storey's own outline. Click a lot edge label to cycle street / lane / neighbour. <kbd>⌘Z</kbd> undo.</div>
+      </details>
     </div>
   </div>
 
-  <div class="col">
-    <div class="pane">
-      <h2>Lot</h2>
+  <div class="side">
+    <details class="pane" id="pnLot"><summary>Lot</summary><div class="body">
       <div class="field"><label>Width (m, east–west)</label><input id="lotW" type="number" step="0.1" min="3"></div>
       <div class="field"><label>Depth (m, north–south)</label><input id="lotD" type="number" step="0.1" min="3"></div>
       <div class="field"><label>Grade elevation (m)</label><input id="grade" type="number" step="0.01"></div>
       <div class="field"><label>Sprinklered throughout</label><select id="spr"><option value="1">yes</option><option value="0">no</option></select></div>
       <div id="edgeFields"></div>
-    </div>
-    <div class="pane">
-      <h2>Blocks <span class="sp"></span><button class="sm pri" id="btnAddBlockWiz">+ block…</button><button class="sm" id="btnAddBlock" title="quick add without the questionnaire">quick</button><button class="sm" id="btnDelBlock">delete</button></h2>
+    </div></details>
+    <details class="pane" id="pnBlocks"><summary>Blocks <span class="sp"></span><span class="acts"><button class="sm pri" id="btnAddBlockWiz">+ block…</button><button class="sm" id="btnAddBlock" title="quick add without the questionnaire">quick</button><button class="sm" id="btnDelBlock">delete</button></span></summary><div class="body">
       <div id="blockTabs" class="chips"></div>
       <div id="blockPanel"></div>
-    </div>
-    <div class="pane">
-      <h2>Context <span class="sp"></span><button class="sm" id="btnAddCtx">+ neighbour</button></h2>
+    </div></details>
+    <details class="pane" id="pnCtx"><summary>Context <span class="sp"></span><span class="acts"><button class="sm" id="btnAddCtx">+ neighbour</button></span></summary><div class="body">
       <div id="ctxPanel"></div>
-    </div>
-    <div class="pane" id="rhinoPane">
-      <h2>Rhino <span class="sp"></span><span class="status" id="rhStatus"><span class="dot"></span>not linked</span></h2>
+    </div></details>
+    <details class="pane" id="pnResults" open><summary>Code check <span class="sp"></span><span class="status" id="resBadge"></span></summary><div class="body">
+      <div id="results"></div>
+    </div></details>
+    <details class="pane" id="rhinoPane"><summary>Rhino <span class="sp"></span><span class="status" id="rhStatus"><span class="dot"></span>not linked</span></summary><div class="body">
       <div class="row"><input type="text" id="rhPath" placeholder="path to site.3dm (default: projects/<name>/rhino/…)"></div>
       <div class="row"><button class="sm pri" id="rhExport">Export .3dm</button><button class="sm" id="rhDownload">Download</button><button class="sm" id="rhImport">Import now</button><label class="status" style="margin-left:auto"><input type="checkbox" id="rhWatch"> watch file</label></div>
       <div class="hint">Layers: <span class="mono">Site</span> (property line, lot edges, ROW centrelines, setbacks, grade at z = 0), <span class="mono">Context</span>, <span class="mono">Massing::&lt;Block&gt;::L1…</span> one extrusion per storey with user text (occupancy, use, beds, units). Edit or add solids under a block's layer, Save in Rhino, and the analysis updates here.</div>
       <div id="rhWarn"></div>
-    </div>
-  </div>
-
-  <div class="col">
-    <div id="results"></div>
-    <div class="card lib">
-      <h3>Saved iterations <span class="sp"></span><button class="sm" id="btnCompare" disabled>Compare selected</button></h3>
+    </div></details>
+    <details class="pane" id="pnLib"><summary>Saved iterations <span class="sp"></span><span class="acts"><button class="sm" id="btnCompare" disabled>Compare selected</button></span></summary><div class="body lib">
       <div class="hint">Click to reopen. Shift-click to select up to three for comparison. Saved iterations are kept <span id="libWhere">in the project's <span class="mono">iterations/</span> folder</span>; each carries its spec, results and a code summary.</div>
       <div id="libList"></div>
       <div id="cmp"></div>
-    </div>
+    </div></details>
   </div>
 </main>
 <div class="toast" id="toast"></div>
@@ -199,6 +212,15 @@ try{ const t=localStorage.getItem(themeKey); if(t) document.documentElement.data
 $("#btnTheme").onclick=()=>{ const cur=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"); applyTheme(cur==="dark"?"light":"dark"); };
 const isDark=()=>{ const t=document.documentElement.dataset.theme; return t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches; };
 
+// ------------------------------------------------------------------ panels: every sidebar section and the overlays are dropdowns; what you left open stays open
+const panelKey="massing-studio-panels"; let panelState={}; try{ panelState=JSON.parse(localStorage.getItem(panelKey)||"{}"); }catch(e){}
+function savePanel(k,v){ panelState[k]=v; try{ localStorage.setItem(panelKey,JSON.stringify(panelState)); }catch(e){} }
+document.querySelectorAll("details[id]").forEach(d=>{ if(d.id in panelState) d.open=!!panelState[d.id]; d.addEventListener("toggle",()=>{ savePanel(d.id,d.open); if(typeof render3d==="function") setTimeout(render3d,0); }); });
+document.querySelectorAll("summary .acts").forEach(a=>a.addEventListener("click",e=>e.preventDefault()));   // the buttons in a header act without toggling it
+const planBox=$("#planBox");
+function applyPlanBox(){ planBox.classList.toggle("big",!!panelState.planBig); planBox.classList.toggle("min",!!panelState.planMin); $("#planMin").textContent=panelState.planMin?"▴":"▾"; $("#planSize").disabled=!!panelState.planMin; }
+$("#planSize").onclick=()=>{ savePanel("planBig",!panelState.planBig); applyPlanBox(); }; $("#planMin").onclick=()=>{ savePanel("planMin",!panelState.planMin); applyPlanBox(); }; applyPlanBox();
+
 // ------------------------------------------------------------------ plan editor (SVG)
 const svg = $("#plan");
 let drag = null;
@@ -253,13 +275,17 @@ function drawPlan(){
     distinct.forEach(k=>{ h+=`<polygon class="blk ghost" points="${ptsAttr(JSON.parse(k))}"/>`; });
     const tgt = bi===sel ? editTarget() : {pts:b.footprint, holes:b.holes};
     h+=`<polygon class="blk ${bi===sel?"sel":""}" data-b="${bi}" points="${ptsAttr(tgt.pts)}"/>`;
-    (tgt.holes||[]).forEach((hole,hi)=>{ h+=`<polygon class="hole" data-b="${bi}" data-h="${hi}" points="${ptsAttr(hole)}"/>`; if(bi===sel) hole.forEach((p,k)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx h" data-b="${bi}" data-h="${hi}" data-v="${k}" cx="${px}" cy="${py}" r="1.0"/>`; }); });
-    tgt.pts.forEach((p,i)=>{ const q=tgt.pts[(i+1)%tgt.pts.length]; const [ax,ay]=toSvg(p[0],p[1]),[bx,by]=toSvg(q[0],q[1]); const mx=(ax+bx)/2,my=(ay+by)/2; const len=Math.hypot(q[0]-p[0],q[1]-p[1]).toFixed(1);
-      if(bi===sel){ // the wall's length tag doubles as its push / pull handle; the rest of the edge adds a corner on double-click
+    // a wall's length tag doubles as its push / pull handle on the selected block (outline and courtyard holes alike)
+    const wallTag=(i,ax,ay,bx,by,len,hi)=>{ const mx=(ax+bx)/2,my=(ay+by)/2, ang=Math.atan2(by-ay,bx-ax)*180/Math.PI, rot=(ang>90||ang<-90)?ang+180:ang, w=len.length*1.3+1.8;
+      return `<g class="edgeH${hi!=null?" h":""}" data-b="${bi}" data-e="${i}"${hi!=null?` data-h="${hi}"`:""} transform="translate(${mx},${my}) rotate(${rot})" style="cursor:${edgeCursor(ang)}"><rect x="${-w/2}" y="-1.4" width="${w}" height="2.8" rx=".6"/><text text-anchor="middle" dominant-baseline="middle">${len}</text></g>`; };
+    (tgt.holes||[]).forEach((hole,hi)=>{ h+=`<polygon class="hole" data-b="${bi}" data-h="${hi}" points="${ptsAttr(hole)}"/>`; if(bi===sel){
+      hole.forEach((p,k)=>{ const q=hole[(k+1)%hole.length]; const [ax,ay]=toSvg(p[0],p[1]),[bx,by]=toSvg(q[0],q[1]); h+=wallTag(k,ax,ay,bx,by,Math.hypot(q[0]-p[0],q[1]-p[1]).toFixed(1),hi); });
+      hole.forEach((p,k)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx h" data-b="${bi}" data-h="${hi}" data-v="${k}" cx="${px}" cy="${py}" r="1.0"/>`; }); } });
+    tgt.pts.forEach((p,i)=>{ const q=tgt.pts[(i+1)%tgt.pts.length]; const [ax,ay]=toSvg(p[0],p[1]),[bx,by]=toSvg(q[0],q[1]); const len=Math.hypot(q[0]-p[0],q[1]-p[1]).toFixed(1);
+      if(bi===sel){ // the rest of the edge adds a corner on double-click
         h+=`<line class="edgeHit" data-b="${bi}" data-e="${i}" x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="transparent" stroke-width="2.5" style="cursor:copy"/>`;
-        const ang=Math.atan2(by-ay,bx-ax)*180/Math.PI, rot=(ang>90||ang<-90)?ang+180:ang, w=len.length*1.3+1.8;
-        h+=`<g class="edgeH" data-b="${bi}" data-e="${i}" transform="translate(${mx},${my}) rotate(${rot})" style="cursor:${edgeCursor(ang)}"><rect x="${-w/2}" y="-1.4" width="${w}" height="2.8" rx=".6"/><text text-anchor="middle" dominant-baseline="middle">${len}</text></g>`; }
-      else h+=`<text class="edgeLbl" x="${mx}" y="${my}" text-anchor="middle" dominant-baseline="middle">${len}</text>`; });
+        h+=wallTag(i,ax,ay,bx,by,len); }
+      else h+=`<text class="edgeLbl" x="${(ax+bx)/2}" y="${(ay+by)/2}" text-anchor="middle" dominant-baseline="middle">${len}</text>`; });
     if(bi===sel) tgt.pts.forEach((p,i)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx" data-b="${bi}" data-v="${i}" cx="${px}" cy="${py}" r="1.3"/>`; });
     const [bx0,by0,bx1,by1]=bbox(tgt.pts); const [cx,cy]=toSvg((bx0+bx1)/2,(by0+by1)/2);
     h+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" style="font:600 3px 'IBM Plex Sans Condensed',sans-serif;fill:var(--ink);pointer-events:none">${esc(b.name)} · ${b.storeys.length} st${bi===sel&&editStorey!=null?` · editing L${editStorey}`:""}</text>`;
@@ -272,7 +298,7 @@ svg.addEventListener("pointerdown",ev=>{
   if(t.classList.contains("vtx")&&t.dataset.c!==undefined){ ctxSel=+t.dataset.c; drag={kind:"cvtx",c:+t.dataset.c,v:+t.dataset.v}; svg.setPointerCapture(ev.pointerId); }
   else if(t.classList.contains("vtx")&&t.dataset.h!==undefined){ const tgt=editTarget(); const hole=tgt.holes[+t.dataset.h]; if(ev.altKey){ if(hole.length>3){ hole.splice(+t.dataset.v,1); changed(); } return; } drag={kind:"hvtx",h:+t.dataset.h,v:+t.dataset.v}; svg.setPointerCapture(ev.pointerId); }
   else if(t.classList.contains("vtx")){ const b=+t.dataset.b, v=+t.dataset.v; sel=b; const tgt=editTarget(); if(ev.altKey){ if(tgt.pts.length>3){ tgt.pts.splice(v,1); changed(); } return; } drag={kind:"vtx",v}; svg.setPointerCapture(ev.pointerId); }
-  else if(t.closest(".edgeH")){ const g=t.closest(".edgeH"); sel=+g.dataset.b; ctxSel=null; const tgt=editTarget(); drag={kind:"edge",e:+g.dataset.e,pts0:tgt.pts.map(p=>p.slice()),start:[x,y]}; svg.setPointerCapture(ev.pointerId); }
+  else if(t.closest(".edgeH")){ const g=t.closest(".edgeH"); sel=+g.dataset.b; ctxSel=null; const tgt=editTarget(); const hi=g.dataset.h!==undefined?+g.dataset.h:null; const pts=hi!=null?tgt.holes[hi]:tgt.pts; drag={kind:"edge",e:+g.dataset.e,h:hi,pts0:pts.map(p=>p.slice()),start:[x,y]}; svg.setPointerCapture(ev.pointerId); }
   else if(t.classList.contains("hole")){ sel=+t.dataset.b; drag={kind:"hmove",h:+t.dataset.h,last:[x,y]}; svg.setPointerCapture(ev.pointerId); }
   else if(t.classList.contains("ctx")){ ctxSel=+t.dataset.c; drag={kind:"cmove",c:ctxSel,last:[x,y]}; svg.setPointerCapture(ev.pointerId); drawPlan(); drawCtxPanel(); }
   else if(t.classList.contains("blk")){ if(sel!==+t.dataset.b){ sel=+t.dataset.b; editStorey=null; } ctxSel=null; drag={kind:"move",last:[x,y]}; svg.setPointerCapture(ev.pointerId); drawPlan(); drawBlockPanel(); }
@@ -284,8 +310,8 @@ svg.addEventListener("pointermove",ev=>{ if(!drag) return; const [x,y]=fromSvg(.
   const inLot=(p)=>[snap(clamp(p[0],0,L.width_m)),snap(clamp(p[1],0,L.depth_m))];
   if(drag.kind==="vtx"){ tgt.pts[drag.v]=L.polygon?[snap(x),snap(y)]:inLot([x,y]); }
   else if(drag.kind==="edge"){ // the pull distance snaps to 0.1 m; only the wall's two corners move, and they keep mm precision so an untouched coordinate (e.g. x = 15.24) survives
-    const nrm=edgeNormal(drag.pts0,drag.e); const d=snap((x-drag.start[0])*nrm[0]+(y-drag.start[1])*nrm[1]); const np=pullEdge(drag.pts0,drag.e,d), n=np.length;
-    [drag.e,(drag.e+1)%n].forEach(i=>{ const p=np[i].map(v=>Math.round(v*1000)/1000); tgt.pts[i]=L.polygon?p:[clamp(p[0],0,L.width_m),clamp(p[1],0,L.depth_m)]; }); }
+    const nrm=edgeNormal(drag.pts0,drag.e); const d=snap((x-drag.start[0])*nrm[0]+(y-drag.start[1])*nrm[1]); const np=pullEdge(drag.pts0,drag.e,d), n=np.length; const pts=drag.h!=null?tgt.holes[drag.h]:tgt.pts;
+    [drag.e,(drag.e+1)%n].forEach(i=>{ const p=np[i].map(v=>Math.round(v*1000)/1000); pts[i]=(L.polygon||drag.h!=null)?p:[clamp(p[0],0,L.width_m),clamp(p[1],0,L.depth_m)]; }); }
   else if(drag.kind==="hvtx"){ tgt.holes[drag.h][drag.v]=[snap(x),snap(y)]; }
   else if(drag.kind==="cvtx"){ spec.context[drag.c].footprint[drag.v]=[snap(x),snap(y)]; }
   else if(drag.kind==="move"||drag.kind==="hmove"||drag.kind==="cmove"){ const dx=x-drag.last[0], dy=y-drag.last[1]; const fp=drag.kind==="move"?tgt.pts:drag.kind==="hmove"?tgt.holes[drag.h]:spec.context[drag.c].footprint;
@@ -389,7 +415,22 @@ canvas.addEventListener("pointermove",e=>{ if(!od) return; const dx=e.clientX-od
 canvas.addEventListener("wheel",e=>{ e.preventDefault(); orbit.r=clamp(orbit.r*(1+e.deltaY*0.001),0.25,4); render3d(); },{passive:false});
 canvas.addEventListener("dblclick",()=>{ orbit={th:-0.9,ph:0.95,r:1,pan:[0,0]}; render3d(); });
 ["sunAz","sunAlt"].forEach(id=>$("#"+id).addEventListener("input",()=>{ $("#sunAzV").textContent=$("#sunAz").value+"°"; $("#sunAltV").textContent=$("#sunAlt").value+"°"; render3d(); }));
-$("#chkShadows").onchange=()=>{ if(renderer){ renderer.shadowMap.enabled=$("#chkShadows").checked; build3d(); } }; $("#chkFaces").onchange=()=>build3d();
+$("#chkShadows").onchange=()=>{ if(renderer){ renderer.shadowMap.enabled=$("#chkShadows").checked; build3d(); } }; $("#chkFaces").onchange=()=>build3d(); $("#chkLabels").onchange=()=>render3d();
+// storey labels: one tag per run of consecutive storeys with the same occupancy and outline, projected onto the canvas by render3d()
+const OCC_NAME={C:"Residential",A2:"Assembly",E:"Retail",D:"Office",F3:"Parking / industrial",A1:"Theatre",B2:"Care",F2:"Industrial"};
+let labels3d=[];
+function collectLabels(){ labels3d=[]; const many=spec.blocks.length>1;
+  spec.blocks.forEach(b=>{ let z=b.first_floor_above_grade_m; const runs=[];
+    b.storeys.forEach((s,i)=>{ const pts=s.footprint||b.footprint, key=s.occupancy+"|"+JSON.stringify(pts); const last=runs[runs.length-1];
+      if(last&&last.key===key){ last.to=i+1; last.z1=z+s.floor_to_floor_m; } else runs.push({key,occ:s.occupancy,from:i+1,to:i+1,z0:z,z1:z+s.floor_to_floor_m,pts}); z+=s.floor_to_floor_m; });
+    runs.forEach(r=>{ labels3d.push({pts:r.pts,y:(r.z0+r.z1)/2,color:OCC_COLOR[r.occ]||"#999",text:`${many?b.name+" · ":""}${OCC_NAME[r.occ]||r.occ} · ${r.from===r.to?`L${r.from}`:`L${r.from}–L${r.to}`}`}); });
+    const en=b.roof.enclosure; if(en&&!/elevator|machine|stair|mechanical|service/i.test(en.use)) labels3d.push({pts:en.footprint,y:z+en.height_m/2,color:OCC_COLOR[en.occupancy]||"#999",text:`${many?b.name+" · ":""}Amenity · roof`}); });
+}
+// each tag sits on the outline point nearest the camera, i.e. on the facade you are looking at
+function placeLabels(){ const box=$("#labels3d"); if(!renderer||!$("#chkLabels").checked){ box.innerHTML=""; return; } const w=canvas.clientWidth,h=canvas.clientHeight; const v=new THREE.Vector3(); const cx=camera.position.x, cy=-camera.position.z; let html="";
+  for(const l of labels3d){ let best=null, bd=Infinity; l.pts.forEach((p,i)=>{ const q=l.pts[(i+1)%l.pts.length]; for(const c of [p,[(p[0]+q[0])/2,(p[1]+q[1])/2]]){ const d=Math.hypot(c[0]-cx,c[1]-cy); if(d<bd){ bd=d; best=c; } } });
+    v.set(best[0],l.y,-best[1]).project(camera); if(v.z>1) continue; html+=`<span class="lbl3d" style="left:${((v.x+1)/2*w).toFixed(0)}px;top:${((1-v.y)/2*h).toFixed(0)}px"><i style="background:${l.color}"></i>${esc(l.text)}</span>`; }
+  box.innerHTML=html; }
 function shapeOf(pts,holes){ const sh=new THREE.Shape(pts.map(p=>new THREE.Vector2(p[0],p[1]))); (holes||[]).forEach(h=>{ const path=new THREE.Path(h.map(p=>new THREE.Vector2(p[0],p[1]))); sh.holes.push(path); }); return sh; }
 function build3d(){
   if(!renderer) return; massGroup.clear(); const L=spec.lot; const dark=isDark();
@@ -431,13 +472,14 @@ function build3d(){
   if($("#chkFaces").checked&&results&&results.building){ for(const f of results.building.exterior_faces){ const r=results.faces[f.label]; if(!r) continue; const s=f.start, e=f.end; const sx=s.x??s[0], sy=s.y??s[1], ex=e.x??e[0], ey=e.y??e[1]; const g=spec.lot.grade_m;
       for(const band of r.bands){ if(band.ok&&!band.frr_min) continue; const z0=band.z0-g, z1=band.z1-g; const len=Math.hypot(ex-sx,ey-sy); const geo=new THREE.PlaneGeometry(len,z1-z0); const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:band.ok?0xe0a437:0xf0453a,transparent:true,opacity:band.ok?.28:.55,side:THREE.DoubleSide,depthWrite:false})); const ang=Math.atan2(ey-sy,ex-sx); m.position.set((sx+ex)/2,(z0+z1)/2,-(sy+ey)/2); m.rotation.y=ang; const nx=(ey-sy)/len, ny=-(ex-sx)/len; m.position.x+=nx*0.06; m.position.z-=ny*0.06; massGroup.add(m); } } }
   scene.background=new THREE.Color(dark?0x0f1318:0xeef0f3); if(hemi) hemi.groundColor=new THREE.Color(dark?0x1a1e25:0x8892a0);
+  collectLabels();
   render3d();
 }
 function render3d(){ if(!renderer) return; const L=spec.lot; const w=canvas.clientWidth,h=canvas.clientHeight; if(canvas.width!==w||canvas.height!==h){renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();}
   const lotPts=L.polygon||[[0,0],[L.width_m,0],[L.width_m,L.depth_m],[0,L.depth_m]]; const [lx0,ly0,lx1,ly1]=bbox(lotPts); const span=Math.max(lx1-lx0,ly1-ly0); const R=span*1.6*orbit.r; const c=new THREE.Vector3((lx0+lx1)/2+orbit.pan[0],Math.min(10,span*0.12),-(ly0+ly1)/2+orbit.pan[1]);
   camera.position.set(c.x+R*Math.sin(orbit.ph)*Math.cos(orbit.th), c.y+R*Math.cos(orbit.ph), c.z+R*Math.sin(orbit.ph)*Math.sin(orbit.th)); camera.lookAt(c);
   if(sun){ const az=+$("#sunAz").value*Math.PI/180, alt=+$("#sunAlt").value*Math.PI/180; const D=span*2.5; sun.position.set(c.x+D*Math.cos(alt)*Math.sin(az), D*Math.sin(alt), c.z+D*Math.cos(alt)*Math.cos(az)); sun.target.position.copy(c); sun.shadow.camera.left=sun.shadow.camera.bottom=-span*1.2; sun.shadow.camera.right=sun.shadow.camera.top=span*1.2; sun.shadow.camera.near=1; sun.shadow.camera.far=D*3; sun.shadow.camera.updateProjectionMatrix(); sun.intensity=0.5+0.7*Math.sin(alt); }
-  renderer.render(scene,camera); }
+  renderer.render(scene,camera); placeLabels(); }
 new ResizeObserver(render3d).observe(canvas);
 
 // ------------------------------------------------------------------ analyze (debounced) + results panel
@@ -485,6 +527,7 @@ function drawResults(){
   const notes=((results.building||{}).notes||[]).slice(1);
   h+=`<div class="card"><h3>Flags <span class="sp"></span><span class="chip ${flags.length?"no":"ok"}">${flags.length}</span></h3>${flags.map(([b,f])=>`<div class="flag ${/confirm|Confirm/.test(f)?"info":""}"><span class="mono" style="color:var(--mut)">${esc(b)}</span> ${esc(f)}</div>`).join("")||"<div class='hint'>none</div>"}${notes.map(n=>`<div class="note">${esc(n)}</div>`).join("")}</div>`;
   $("#results").innerHTML=h;
+  $("#resBadge").innerHTML=Object.entries(results.summary).map(([b,s])=>`<span class="mono">${esc(b)} ${esc(s.article||"—")}</span>`).join(" · ")+` · <span class="chip ${flags.length?"no":"ok"}">${flags.length} flag${flags.length===1?"":"s"}</span>`;
 }
 
 // ------------------------------------------------------------------ library

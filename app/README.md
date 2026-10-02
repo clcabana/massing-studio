@@ -32,6 +32,15 @@ The app opens with a questionnaire (multiple choice wherever possible):
 
 Everything the wizard sets is editable afterwards in the Lot, Blocks and Context panels.
 
+## Layout
+
+The 3D view fills the page. The plan editor floats over its lower-left corner (⤢ enlarges it, ▾ tucks it away
+to a title bar) and a **View** dropdown in the upper-right holds storey labels, shadows, face check and the sun
+sliders. Every storey run carries a tag with its occupancy in plain words (Residential, Retail, Office…), placed on
+the facade you are looking at. The sidebar on the right is a stack of dropdowns — Lot, Blocks, Context, Code check,
+Rhino, Saved iterations — closed until you need them; which ones are open is remembered in the browser. The Code
+check header shows the governing article per block and the flag count even when the section is closed.
+
 ## Shaping the massing (v2)
 
 * **Per-storey outlines.** Click a storey number (L1, L2…) in the Blocks panel to edit that storey's own outline
@@ -49,7 +58,7 @@ Everything the wizard sets is editable afterwards in the Lot, Blocks and Context
 * **Context.** Neighbouring buildings with a height, drawn in the plan, cast shadows in 3D and export to Rhino.
   They do not enter the code analysis (limiting distance is to the property line).
 * **3D.** Orbit (drag), pan (right-drag / shift-drag), zoom (wheel), double-click to reset; sun azimuth and
-  altitude sliders with cast shadows; storeys coloured by occupancy; **face check** paints faces red where
+  altitude sliders with cast shadows; storeys coloured by occupancy and tagged by it; **face check** paints faces red where
   unprotected openings exceed the permitted percentage and amber where the wall needs a fire-resistance rating.
 * **Undo / redo** (⌘/Ctrl Z, ⇧⌘Z), light / dark theme (◐), Esc leaves storey-edit mode.
 

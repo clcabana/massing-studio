@@ -95,8 +95,9 @@ const ENGINE_LABEL="VBBL 2025 · in-browser engine";''')
 
     # ---- Rhino link: needs the local server ---------------------------------------------
     scripts = cut(scripts, "// @@RHINO-START", "// @@RHINO-END", "// Rhino link: local app only")
-    body = re.sub(r'<div class="pane" id="rhinoPane">.*?</div>\n    </div>\n', '''<div class="pane"><h2>Rhino</h2><div class="hint">The Rhino round trip (export site.3dm → edit in Rhino → live update here) runs in the local Massing Studio app, which can read files on your disk. This published page cannot.</div></div>
+    body, n = re.subn(r'<details class="pane" id="rhinoPane">.*?</details>\n', '''<details class="pane" id="pnRhinoNote"><summary>Rhino</summary><div class="body"><div class="hint">The Rhino round trip (export site.3dm → edit in Rhino → live update here) runs in the local Massing Studio app, which can read files on your disk. This published page cannot.</div></div></details>
 ''', body, flags=re.S)
+    assert n == 1, "Rhino panel not found in index.html"
 
     # ---- wizard: presets inline, map disabled ----------------------------------------
     wizard = wizard.replace('''async function loadPresets(){ if(!PRESETS) PRESETS = await (await fetch("/api/presets")).json(); return PRESETS; }''',
