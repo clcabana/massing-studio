@@ -53,6 +53,8 @@ details.pane>.body{padding:2px 12px 12px} details.pane>.body .card{margin:8px 0;
 .scale{font:300 2.2px var(--sans);fill:var(--mut);pointer-events:none} .north{font:400 2.4px var(--sans);fill:var(--ink2);pointer-events:none}
 .stName,.north,.scale,.ctxLbl{paint-order:stroke;stroke:var(--sheet);stroke-width:.6;stroke-linejoin:round} .ctxLbl{stroke:var(--ink2);stroke-width:.4}
 .edgeLbl{font:300 2px var(--sans);fill:var(--ink2);paint-order:stroke;stroke:var(--sheet);stroke-width:.7;stroke-linejoin:round;pointer-events:none} .edgeH rect{fill:var(--sheet);fill-opacity:.92;stroke:none} .edgeH text{font:400 2.1px var(--sans);fill:var(--ink)} .edgeH:hover rect{fill:var(--blue-soft);fill-opacity:1} .edgeH.h rect{stroke:var(--ink);stroke-width:.2;stroke-dasharray:.8 .5} .edgeH.c text{fill:var(--ink2)} .vtx.c{stroke:var(--ink2)} .vtx.c:hover{fill:var(--ink2)} .ctxLbl{font:300 2.2px var(--sans);fill:var(--sheet);pointer-events:none}
+/* the typed-length box that opens over a wall's tag on double-click */
+.dimEdit{position:absolute;z-index:3;transform:translate(-50%,-50%);width:64px;box-sizing:border-box;font:400 12px "IBM Plex Mono",monospace;text-align:center;padding:2px 4px;border:1px solid var(--blue);border-radius:3px;background:var(--sheet);color:var(--ink);box-shadow:var(--float);outline:none}
 .field{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;margin:4px 0} .field label{color:var(--ink2)} .field input,.field select{font:inherit;padding:3px 6px;border:1px solid var(--rule);border-radius:3px;width:120px;text-align:right;background:var(--sheet);color:var(--ink)}
 .field select{text-align:left}
 .storey{display:grid;grid-template-columns:22px 58px 1fr 52px 48px 48px 22px;gap:4px;align-items:center;margin:3px 0} .storey input,.storey select{font:inherit;padding:2px 4px;border:1px solid var(--rule);border-radius:3px;width:100%;background:var(--sheet);color:var(--ink)}
@@ -123,7 +125,7 @@ table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:
       <div class="bar">Plan <span class="legend"><span><i style="background:#6b93d1"></i>C</span><span><i style="background:#df9a74"></i>A2</span><span><i style="background:#d693b1"></i>E</span><span><i style="background:#d9b55f"></i>D</span><span><i style="background:#6fb59c"></i>F3</span></span><span class="sp"></span><button class="sm ghost" id="planSize" title="Larger / smaller plan">⤢</button><button class="sm ghost" id="planMin" title="Hide / show the plan">▾</button></div>
       <svg id="plan" viewBox="0 0 100 100"></svg>
       <details class="planHelp"><summary>How to edit</summary>
-        <div class="hint">Drag a corner to reshape, drag a wall's length tag to push or pull that wall (courtyard walls too), drag a body to move, double-click an edge to add a corner, <kbd>Alt</kbd>-click a corner to remove it. Click a storey number in the Blocks panel to edit that storey's own outline. Click a lot edge label to cycle street / lane / neighbour. <kbd>⌘Z</kbd> undo.</div>
+        <div class="hint">Drag a corner to reshape, drag a wall's length tag to push or pull that wall (courtyard walls too), double-click the tag to type the wall's length (it keeps its centre; the walls beside it move), drag a body to move, double-click an edge to add a corner, <kbd>Alt</kbd>-click a corner to remove it. Click a storey number in the Blocks panel to edit that storey's own outline. Click a lot edge label to cycle street / lane / neighbour. <kbd>⌘Z</kbd> undo.</div>
       </details>
     </div>
   </div>
@@ -211,6 +213,14 @@ function edgeNormal(pts,e){ const p=pts[e],q=pts[(e+1)%pts.length]; const L=Math
 function pullEdge(pts,e,d){ const n=pts.length, out=pts.map(p=>p.slice()); const nrm=edgeNormal(pts,e);
   const slide=(k,adj)=>{ const P=pts[k],R=pts[adj]; const u=[P[0]-R[0],P[1]-R[1]]; const un=u[0]*nrm[0]+u[1]*nrm[1]; const ul=Math.hypot(u[0],u[1])||1; if(Math.abs(un)/ul<0.15) return [P[0]+nrm[0]*d,P[1]+nrm[1]*d]; const t=1+d/un; return [R[0]+u[0]*t,R[1]+u[1]*t]; };
   out[e]=slide(e,(e-1+n)%n); out[(e+1)%n]=slide((e+1)%n,(e+2)%n); return out; }
+// set the length of edge e (pts[e] → pts[e+1]) to `len` metres. The wall keeps its line and its centre: the two
+// walls beside it are pushed or pulled parallel to themselves (pullEdge) by whatever moves this wall's corners
+// half the change each, so a rectangle stays a rectangle. A side wall nearly parallel to this one cannot change
+// its length by moving parallel, so that corner slides along the wall instead.
+function resizeEdge(pts,e,len){ const n=pts.length; const p=pts[e],q=pts[(e+1)%n]; const L=Math.hypot(q[0]-p[0],q[1]-p[1]); let out=pts.map(a=>a.slice()); if(!(L>1e-9)||!(len>0)) return out;
+  const u=[(q[0]-p[0])/L,(q[1]-p[1])/L], half=(len-L)/2;
+  const grow=(adj,corner,dir)=>{ const nrm=edgeNormal(out,adj); const c=dir[0]*nrm[0]+dir[1]*nrm[1]; if(Math.abs(c)<0.15) out[corner]=[out[corner][0]+dir[0]*half,out[corner][1]+dir[1]*half]; else out=pullEdge(out,adj,half*c); };
+  grow((e+1)%n,(e+1)%n,u); grow((e-1+n)%n,e,[-u[0],-u[1]]); return out; }
 function insetPoly(pts,d){ const [x0,y0,x1,y1]=bbox(pts); const cx=(x0+x1)/2, cy=(y0+y1)/2; const sx=Math.max(0.1,(x1-x0-2*d)/(x1-x0)), sy=Math.max(0.1,(y1-y0-2*d)/(y1-y0)); return pts.map(p=>[snap(cx+(p[0]-cx)*sx), snap(cy+(p[1]-cy)*sy)]); }
 // what the plan editor is currently editing: the block outline or one storey's own outline
 function editTarget(){ const b=spec.blocks[sel]; if(!b) return null; if(editStorey!=null){ const st=b.storeys[editStorey-1]; if(st&&st.footprint) return {pts:st.footprint, holes:st.holes!=null?st.holes:b.holes, owner:st, label:`L${editStorey}`}; } return {pts:b.footprint, holes:b.holes, owner:b, label:"block"}; }
@@ -338,8 +348,11 @@ function drawPlan(){
   const bar=5*s; h+=`<text class="north" x="2" y="4.6">N ↑</text><line x1="2" y1="97" x2="${(2+bar).toFixed(2)}" y2="97" stroke="var(--ink2)" stroke-width=".35"/><line x1="2" y1="96" x2="2" y2="98" stroke="var(--ink2)" stroke-width=".35"/><line x1="${(2+bar).toFixed(2)}" y1="96" x2="${(2+bar).toFixed(2)}" y2="98" stroke="var(--ink2)" stroke-width=".35"/><text class="scale" x="${(3.2+bar).toFixed(2)}" y="97.8">5 m</text>`;
   svg.innerHTML=h;
 }
+let tagClick=null;   // the last pointerdown on a wall tag, to see a double-click (the plan redraws between the clicks, so the browser's dblclick is not reliable here)
 svg.addEventListener("pointerdown",ev=>{
   const t=ev.target; const [x,y]=fromSvg(...clientToSvg(ev));
+  const tagG=t.closest(".edgeH"); if(tagG){ const key=["c","b","h","e"].map(k=>tagG.dataset[k]??"").join("|"), now=performance.now();
+    if(tagClick&&tagClick.key===key&&now-tagClick.t<450){ tagClick=null; ev.preventDefault(); openDimEditor(tagG); return; } tagClick={key,t:now}; }
   if(t.classList.contains("vtx")&&t.dataset.c!==undefined){ ctxSel=+t.dataset.c; const fp=spec.context[ctxSel].footprint; if(ev.altKey){ if(fp.length>3){ fp.splice(+t.dataset.v,1); changed(); } return; } drag={kind:"cvtx",c:ctxSel,v:+t.dataset.v}; svg.setPointerCapture(ev.pointerId); }
   else if(t.closest(".edgeH")&&t.closest(".edgeH").dataset.c!==undefined){ const g=t.closest(".edgeH"); ctxSel=+g.dataset.c; drag={kind:"cedge",c:ctxSel,e:+g.dataset.e,pts0:spec.context[ctxSel].footprint.map(p=>p.slice()),start:[x,y]}; svg.setPointerCapture(ev.pointerId); }
   else if(t.classList.contains("vtx")&&t.dataset.h!==undefined){ const tgt=editTarget(); const hole=tgt.holes[+t.dataset.h]; if(ev.altKey){ if(hole.length>3){ hole.splice(+t.dataset.v,1); changed(); } return; } drag={kind:"hvtx",h:+t.dataset.h,v:+t.dataset.v}; svg.setPointerCapture(ev.pointerId); }
@@ -368,7 +381,29 @@ svg.addEventListener("pointermove",ev=>{ if(!drag) return; const [x,y]=fromSvg(.
     fp.forEach(p=>{p[0]=snap(p[0]+ddx); p[1]=snap(p[1]+ddy);}); if(drag.kind==="move"&&tgt.owner===spec.blocks[sel]) (tgt.holes||[]).forEach(hh=>hh.forEach(p=>{p[0]=snap(p[0]+ddx); p[1]=snap(p[1]+ddy);})); drag.last=[x,y]; }
   drawPlan(); scheduleAnalyze(); });
 svg.addEventListener("pointerup",()=>{ if(drag){ drag=null; changed(); } });
-svg.addEventListener("dblclick",ev=>{ const t=ev.target; if(t.classList.contains("edgeHit")){ const e=+t.dataset.e; const fp=t.dataset.c!==undefined?spec.context[+t.dataset.c].footprint:editTarget().pts; const p=fp[e],q=fp[(e+1)%fp.length]; fp.splice(e+1,0,[snap((p[0]+q[0])/2),snap((p[1]+q[1])/2)]); changed(); } });
+svg.addEventListener("dblclick",ev=>{ const t=ev.target; if(t.closest(".edgeH")) return;   // handled on pointerdown
+  if(t.classList.contains("edgeHit")){ const e=+t.dataset.e; const fp=t.dataset.c!==undefined?spec.context[+t.dataset.c].footprint:editTarget().pts; const p=fp[e],q=fp[(e+1)%fp.length]; fp.splice(e+1,0,[snap((p[0]+q[0])/2),snap((p[1]+q[1])/2)]); changed(); } });
+// double-click a wall's length tag to type the length: a box opens over the tag (Enter or clicking away applies,
+// Esc cancels). The tag says whose wall it is (block / courtyard hole / neighbour); its screen position is read
+// before anything redraws the plan. The double-click itself is seen in the pointerdown handler above.
+let dimEdit=null;
+function openDimEditor(g){ closeDimEditor(); const r=g.getBoundingClientRect(), br=planBox.getBoundingClientRect();
+  const who={c:g.dataset.c!==undefined?+g.dataset.c:null, b:g.dataset.b!==undefined?+g.dataset.b:null, h:g.dataset.h!==undefined?+g.dataset.h:null, e:+g.dataset.e};
+  const inp=document.createElement("input"); inp.type="text"; inp.inputMode="decimal"; inp.className="dimEdit"; inp.value=g.querySelector("text").textContent; inp.title="wall length in metres · Enter applies, Esc cancels";
+  inp.style.left=`${r.left+r.width/2-br.left}px`; inp.style.top=`${r.top+r.height/2-br.top}px`;
+  let done=false; const finish=(apply)=>{ if(done) return; done=true; const v=parseFloat(String(inp.value).replace(",",".")); inp.remove(); dimEdit=null; if(apply&&isFinite(v)) setEdgeLength(who,v); };
+  inp.addEventListener("keydown",ev=>{ ev.stopPropagation(); if(ev.key==="Enter"){ ev.preventDefault(); finish(true); } else if(ev.key==="Escape"){ ev.preventDefault(); finish(false); } });
+  inp.addEventListener("blur",()=>finish(true));
+  planBox.appendChild(inp); dimEdit=inp; inp.focus(); inp.select(); }
+function closeDimEditor(){ if(dimEdit){ const i=dimEdit; dimEdit=null; i.remove(); } }
+function setEdgeLength(who,len){ const L=spec.lot; if(!(len>=0.1)){ toast("a wall needs at least 0.1 m"); return; }
+  let pts, free;   // free: no lot to clamp to (a described polygon lot, a courtyard, a neighbour)
+  if(who.c!=null){ if(!spec.context[who.c]) return; pts=spec.context[who.c].footprint; free=true; }
+  else { if(!spec.blocks[who.b]) return; sel=who.b; const tgt=editTarget(); pts=who.h!=null?(tgt.holes||[])[who.h]:tgt.pts; free=!!L.polygon||who.h!=null; }
+  if(!pts||who.e>=pts.length) return;
+  const np=resizeEdge(pts,who.e,len).map(p=>{ p=p.map(v=>Math.round(v*1000)/1000); return free?p:[clamp(p[0],0,L.width_m),clamp(p[1],0,L.depth_m)]; });
+  pts.splice(0,pts.length,...np); changed();
+  const a=np[who.e], b=np[(who.e+1)%np.length], got=Math.hypot(b[0]-a[0],b[1]-a[1]); if(Math.abs(got-len)>0.005) toast(`wall is ${got.toFixed(2)} m — held by the lot boundary`); }
 
 // ------------------------------------------------------------------ lot & block panels
 // ---- zoning district and its limits (Zoning and Development By-law No. 3575); the table comes from the engine data

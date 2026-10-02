@@ -26,7 +26,8 @@ Built in the UBC M.Arch course ARCH 540 (AI Workflows) as a Claude project, then
 2. In the **Set up the site** dialog pick **Worked example** to load Courtyard Commons, or
    **Describe the site** to answer a few questions (frontage, depth, which edges face a street, grade)
    and then **+ block…** to add a building from a preset.
-3. Drag a corner or a wall tag in the **Plan** panel (lower left), or change storeys, setbacks and
+3. Drag a corner or a wall tag in the **Plan** panel (lower left), double-click a wall tag to type
+   its length, or change storeys, setbacks and
    glazing in the **Blocks** dropdown (right). The **Code check** dropdown re-runs on every change;
    its header shows the zoning status, the governing article per block and the flag count. The
    **Lot** dropdown holds the zoning district and its limits (height, storeys, FSR, coverage,

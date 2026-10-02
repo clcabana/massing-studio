@@ -49,6 +49,10 @@ check header shows the governing article per block and the flag count even when 
   their own outline are marked ◧ and ghosted in the plan. Building area follows the largest storey; exposing
   faces are computed per run of identical outlines (e.g. `south (street) L1–L2` and `south (street) L3–L6`),
   each with its own limiting distance. A stepped-back wall that stays on a party line keeps that edge's 0 % glazing.
+* **Typed wall lengths.** Double-click a wall's length tag in the plan and type the length (Enter applies, Esc
+  cancels). The wall keeps its line and its centre; the two walls beside it move parallel to themselves, so a
+  rectangle stays a rectangle. Works on block outlines, storey outlines, courtyard walls and neighbours; on a
+  rectangular lot the block is held inside the lot, like a drag, and a toast says so.
 * **Courtyards.** "+ courtyard" adds a hole (draggable, reshapeable) to the block or to one storey. The area is
   subtracted; courtyard faces of one building are not exposing building faces (noted, with a reminder to check
   for a firewall across the court).
