@@ -30,12 +30,13 @@ from typing import Optional
 
 import rhino3dm as rh
 
-from codesheet.massing import (MassingSpec, BlockSpec, StoreySpec, Lot, LotEdge, ContextBuilding, RoofSpec, EnclosureSpec, _ccw)
+from codesheet.massing import (MassingSpec, BlockSpec, StoreySpec, Lot, LotEdge, ContextBuilding, ContextTree, RoofSpec, EnclosureSpec, _ccw)
 
 DOC_KEY = "codesheet.spec"
-FILE_VERSION = 8
+FILE_VERSION = 9
 COLORS = {"Site": (30, 33, 38, 255), "Property line": (200, 53, 43, 255), "Lot edges": (120, 120, 120, 255), "ROW centrelines": (200, 53, 43, 255),
-          "Setbacks": (178, 107, 0, 255), "Grade": (223, 227, 211, 255), "Context": (150, 150, 150, 255), "Neighbours": (170, 170, 170, 255), "Massing": (29, 79, 156, 255)}
+          "Setbacks": (178, 107, 0, 255), "Grade": (223, 227, 211, 255), "Context": (150, 150, 150, 255), "Neighbours": (170, 170, 170, 255),
+          "Trees": (95, 158, 90, 255), "Street names": (120, 120, 120, 255), "Massing": (29, 79, 156, 255)}
 OCC_COLORS = {"C": (42, 120, 214, 255), "A2": (235, 104, 52, 255), "E": (232, 123, 164, 255), "D": (237, 161, 0, 255), "F3": (27, 175, 122, 255), "A1": (198, 82, 31, 255), "B2": (74, 58, 167, 255), "F2": (0, 131, 0, 255)}
 
 
@@ -122,7 +123,17 @@ def export_3dm(spec: MassingSpec, path: str | pathlib.Path) -> pathlib.Path:
     # context
     for c in spec.context:
         ex = rh.Extrusion.Create(_polyline(_ccw([tuple(p) for p in c.footprint])), c.height_m, True)
-        m.Objects.AddExtrusion(ex, _attrs(lay.get("Context::Neighbours"), c.name, kind="context", height_m=c.height_m))
+        m.Objects.AddExtrusion(ex, _attrs(lay.get("Context::Neighbours"), c.name, kind="context", height_m=c.height_m, source=c.source or None))
+    # trees: an octagonal trunk up to the crown centre, a sphere for the crown; the trunk carries the record
+    for t in spec.trees:
+        cr = t.crown_m / 2; cz = max(cr, t.height_m - cr)
+        trunk = rh.Extrusion.Create(_polyline([(t.x + 0.18 * math.cos(k * math.pi / 4), t.y + 0.18 * math.sin(k * math.pi / 4)) for k in range(8)]), cz, True)
+        m.Objects.AddExtrusion(trunk, _attrs(lay.get("Context::Trees"), t.name or "tree", kind="tree", x=t.x, y=t.y, height_m=t.height_m, crown_m=t.crown_m))
+        m.Objects.AddBrep(rh.Brep.CreateFromSphere(rh.Sphere(_P(t.x, t.y, cz), cr)), _attrs(lay.get("Context::Trees"), t.name or "tree", kind="tree_crown"))
+    # street names: a text dot at the middle of each centreline
+    for s in spec.streets:
+        a, b = s.line[(len(s.line) - 1) // 2], s.line[len(s.line) // 2]
+        m.Objects.AddTextDot(s.name, _P((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0.1), _attrs(lay.get("Context::Street names"), s.name, kind="street_name"))
     # massing
     for blk in spec.blocks:
         bl = lay.get(f"Massing::{blk.name}")
@@ -256,7 +267,7 @@ def import_3dm(path: str | pathlib.Path) -> tuple[MassingSpec, list[str]]:
     for i in range(len(m.Layers)):
         layer_of[i] = _layer_path(m, i)
 
-    lot_pts = None; edges_info = {}; context = []; blocks: dict[str, dict] = {}
+    lot_pts = None; edges_info = {}; context = []; trees = []; blocks: dict[str, dict] = {}
     for obj in m.Objects:
         g = obj.Geometry; a = obj.Attributes; lp = layer_of.get(a.LayerIndex, "")
         kind = a.GetUserString("kind") or ""
@@ -268,9 +279,15 @@ def import_3dm(path: str | pathlib.Path) -> tuple[MassingSpec, list[str]]:
             elif kind in ("street", "lane", "neighbour"):
                 edges_info[_num(a.GetUserString("edge"), -1)] = (kind, _num(a.GetUserString("row_width_m"), 0.0), a.GetUserString("label"))
         elif parts[0] == "Context":
+            if kind == "tree":                       # the trunk carries the record; the crown and the street-name dots are decoration
+                trees.append(ContextTree(x=_num(a.GetUserString("x"), 0.0), y=_num(a.GetUserString("y"), 0.0), height_m=_num(a.GetUserString("height_m"), 8.0),
+                                         crown_m=_num(a.GetUserString("crown_m"), 5.0), name=a.Name or ""))
+                continue
+            if kind in ("tree_crown", "street_name"):
+                continue
             fz = _footprint_of(g)
             if fz:
-                context.append(ContextBuilding(name=a.Name or "neighbour", footprint=fz[0], height_m=max(0.5, fz[2])))
+                context.append(ContextBuilding(name=a.Name or "neighbour", footprint=fz[0], height_m=max(0.5, fz[2]), source=a.GetUserString("source") or ""))
         elif parts[0] == "Massing" and len(parts) >= 2:
             blk = parts[1]
             B = blocks.setdefault(blk, {"volumes": [], "holes": [], "enclosure": None, "parapet": None})
@@ -355,5 +372,6 @@ def import_3dm(path: str | pathlib.Path) -> tuple[MassingSpec, list[str]]:
     spec = MassingSpec(project_name=base.project_name if base else pathlib.Path(path).stem, lot=lot, blocks=out_blocks or (base.blocks if base else []),
                        sprinklered=base.sprinklered if base else True, streets_faced=base.streets_faced if base else None,
                        chosen_articles={k: v for k, v in (base.chosen_articles if base else {}).items() if k in {b.name for b in out_blocks}},
-                       context=context or (base.context if base else []))
+                       context=context or (base.context if base else []), trees=trees or (base.trees if base else []),
+                       streets=base.streets if base else [])
     return spec, warnings

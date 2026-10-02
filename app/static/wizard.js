@@ -43,7 +43,7 @@ async function siteWizard(){
   const P=await loadPresets();
   const a0=await runStepper("Set up the site",[
     {id:"mode", title:"How do you want to start?", type:"choice", options:[
-      {label:"Pick a site on the map", desc:"Click a parcel on a map of Vancouver. Lot outline, street and lane edges and zoning are read from City of Vancouver Open Data.", value:"map"},
+      {label:"Pick a site on the map", desc:"Click a parcel on a map of Vancouver. Lot outline, street and lane edges, zoning, the neighbouring buildings with their heights, the street trees and the street names are read from City of Vancouver Open Data.", value:"map"},
       {label:"Describe the site", desc:"Answer a few questions: frontage, depth, which edges face a street or lane, grade.", value:"describe"},
       {label:"Load a saved iteration", desc:"Reopen a massing from the library.", value:"load"},
       {label:"Worked example", desc:"Courtyard Commons, a synthetic two-block project with an assembly ground floor, as a massing.", value:"example"}]}]);
@@ -76,6 +76,10 @@ async function siteWizard(){
 
 function applyLot(lotResp, a0){
   spec=newSpec(); spec.blocks=[]; spec.lot=lotResp.lot; spec.project_name=lotResp.lot.address||"Picked site";
+  // site context in the lot's frame: neighbours (with heights), public trees, street names
+  spec.context=lotResp.context||[]; spec.trees=lotResp.trees||[]; spec.streets=lotResp.streets||[];
+  if(lotResp.context_warning) toast(lotResp.context_warning);
+  else if(spec.context.length||spec.trees.length) toast(`${spec.context.length} neighbouring buildings, ${spec.trees.length} trees and ${new Set(spec.streets.map(s=>s.name)).size} street names loaded`);
   if(!spec.lot.edges) spec.lot.edges={south:{kind:"neighbour",row_width_m:0},north:{kind:"neighbour",row_width_m:0},east:{kind:"neighbour",row_width_m:0},west:{kind:"neighbour",row_width_m:0}};
   sel=0; changed(true);
 }
@@ -111,7 +115,7 @@ async function blockWizard(first){
     {id:"glaz", title:"Glazing", help:"Ratios by what each face looks at; the party walls get 0 %. Adjust per edge afterwards.", type:"choice", default:"auto", options:[
       {label:`By exposure — street ${P.glazing_by_exposure.street} %, lane ${P.glazing_by_exposure.lane} %, neighbour ${P.glazing_by_exposure.neighbour} %`, value:"auto"},{label:"Uniform 30 %", value:30},{label:"Uniform 50 %", value:50}]},
     {id:"neigh", title:"Neighbouring buildings (for the 3D view and the Rhino file)", help:"Context only — limiting distance is measured to the property line, not to the neighbour.", type:"multi", default:[], options:[
-      {label:"Left (west) neighbour, 3 storeys", value:"west"},{label:"Right (east) neighbour, 3 storeys", value:"east"},{label:"Across the lane / rear, 2 storeys", value:"north"}], when:()=>first},
+      {label:"Left (west) neighbour, 3 storeys", value:"west"},{label:"Right (east) neighbour, 3 storeys", value:"east"},{label:"Across the lane / rear, 2 storeys", value:"north"}], when:()=>first&&!(spec.context||[]).length},   // skipped when the map already brought the real neighbours
     {id:"name", title:"Block name", type:"text", default:String.fromCharCode(65+spec.blocks.length)},
   ]);
   if(!a) return;
@@ -166,7 +170,7 @@ function mapPicker(){
         mapData.lanes.forEach(s=>L.polyline(s.line.map(p=>[p[1],p[0]]),{color:"#b26b00",weight:2,dashArray:"4 4",opacity:.8}).addTo(mapLayers).bindTooltip("lane"));
         mapData.parcels.forEach(p=>{ const poly=L.polygon(p.ring.map(q=>[q[1],q[0]]),{color:"#1d4f9c",weight:1,fillOpacity:.12}).addTo(mapLayers);
           poly.bindTooltip(p.address||p.id); poly.on("mouseover",()=>poly.setStyle({fillOpacity:.35})); poly.on("mouseout",()=>poly.setStyle({fillOpacity:.12}));
-          poly.on("click",async()=>{ status.textContent="reading lot…"; const rr=await fetch("/api/parcels/lot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({parcel:p,streets:mapData.streets,lanes:mapData.lanes,zoning:mapData.zoning,grade_m:10})});
+          poly.on("click",async()=>{ status.textContent="reading lot…"; const rr=await fetch("/api/parcels/lot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({parcel:p,streets:mapData.streets,lanes:mapData.lanes,zoning:mapData.zoning,parcels:mapData.parcels,grade_m:10})});
             const lot=await rr.json(); dlg.close(); resolve(lot); }); });
         status.textContent=`${mapData.parcels.length} parcels${mapData.fixture?" — OFFLINE FIXTURE (synthetic block), not real parcels":""}. Click one.`;
       }catch(e){ status.textContent="could not load parcels: "+e; }

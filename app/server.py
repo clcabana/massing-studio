@@ -163,7 +163,9 @@ class LotRequest(BaseModel):
     streets: list[dict] = []
     lanes: list[dict] = []
     zoning: list[dict] = []
+    parcels: list[dict] = []          # the parcels on the map, to name the neighbours by address
     grade_m: float = 10.0
+    context: bool = True              # also fetch neighbours, trees and street names
 
 
 @app.get("/api/parcels")
@@ -177,7 +179,15 @@ def parcels_near(lat: float, lon: float, radius: float = 250):
 
 @app.post("/api/parcels/lot")
 def parcel_lot(req: LotRequest):
-    return parcels_mod.parcel_to_lot(req.parcel, req.streets, req.lanes, req.zoning, req.grade_m)
+    """The picked parcel as a Lot, plus the site context (neighbours with heights, public trees, street names)
+    in the same frame. A context failure never loses the lot: it comes back as `context_warning`."""
+    res = parcels_mod.parcel_to_lot(req.parcel, req.streets, req.lanes, req.zoning, req.grade_m)
+    if req.context:
+        try:
+            res.update(parcels_mod.site_context(res["frame"], res["lot"]["polygon"], req.parcels, req.streets, fixture_origin=req.parcel.get("origin") if req.parcel.get("fixture") else None))
+        except Exception as e:
+            res["context_warning"] = f"Neighbours, trees and street names could not be loaded from Open Data: {str(e)[:160]}"
+    return res
 
 
 @app.get("/api/presets")

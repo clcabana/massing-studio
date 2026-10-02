@@ -26,8 +26,10 @@ Built in the UBC M.Arch course ARCH 540 (AI Workflows) as a Claude project, then
 the whole engine in the browser. Saved iterations stay in your browser's localStorage. The parcel map
 and the Rhino round trip need the local server and are switched off there.
 
-**The local app** adds the City of Vancouver parcel picker, saved iterations on disk with an A3 PDF
-code summary each, and a live link to Rhino (export `.3dm`, edit in Rhino, save, the analysis updates).
+**The local app** adds the City of Vancouver parcel picker (the lot, plus the neighbouring buildings with
+LiDAR heights, the street trees and the street names, all from City of Vancouver Open Data), saved iterations
+on disk with an A3 PDF code summary each, and a live link to Rhino (export `.3dm`, edit in Rhino, save, the
+analysis updates).
 
 ```bash
 pip install -r requirements.txt

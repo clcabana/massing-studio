@@ -25,7 +25,8 @@ Built in a Claude Cowork session for Claudio (GenEnv, UBC). Continue here.
       static/engine.js   JavaScript port of the engine (kept equal to Python by tests/test_engine_js.py)
       build_artifact.py  build_parts() strips the server (markers @@API/@@LIBRARY/@@RHINO); artifact_page() → out/massing_studio_artifact.html
       build_pages.py     the GitHub Pages site → out/site/ (complete document, relative paths, three.js self-hosted)
-      parcels.py         City of Vancouver Open Data parcel → lot (untested live from the sandbox)
+      parcels.py         City of Vancouver Open Data: parcel → lot, and site_context() → neighbours (2015 footprints,
+                         heights from the 2009 LiDAR footprints), public trees, street names — all in the lot's frame
     data/bylaw/vbbl-2025/   articles.json (569 Part 3 articles extracted from the PDF), table_3231_BC.json
     data/projects/courtyard_commons.py   SYNTHETIC golden project (3 blocks incl. a 3.2.1.2 parkade); lane_mixed_use.py synthetic
     tests/               hand-worked golden values on the synthetic projects, tables, targets, JS↔Python parity, Rhino round trip, the server-less builds
@@ -73,8 +74,12 @@ Massing Studio is published as a Claude artifact: https://claude.ai/artifact/9JH
 
 ## Open items
 
-- Parcel map: DATASETS ids/fields verified live against opendata.vancouver.ca on 2026-09-29. The Explore API
-  caps `limit` at 100 per request, so `_ods` pages with `offset`; `tests/test_parcels.py` pins that.
+- Parcel map: DATASETS ids/fields verified live against opendata.vancouver.ca on 2026-09-29 (parcels, zoning,
+  streets, lanes) and 2026-10-02 (building-footprints-2015: outlines only; building-footprints-2009: hgt_agl etc.;
+  public-trees: height_m, diameter_cm, common_name). The Explore API caps `limit` at 100 per request, so `_ods`
+  pages with `offset`; `tests/test_parcels.py` pins that and the context assembly on live-shaped records.
+  Site context (spec.context / spec.trees / spec.streets) is for the 3D view, the plan and the Rhino file only;
+  the engine ignores it. The live fetch has not been exercised from this machine, only the fixture and mocks.
 - Save-in-Rhino: first real test done 2026-09-29 with Rhino 8. Findings: Rhino re-saves edited storeys as
   Breps (importer handles it); the Download button's copy lands in ~/Downloads, so `/api/rhino/status`
   reports newer same-named copies there and the UI follows them; import waits for the file to settle and

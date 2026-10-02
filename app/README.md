@@ -104,6 +104,16 @@ the nearest centreline just outside that edge, right-of-way width ~ 2 x the dist
 zoning district from the polygon the parcel sits in. Check the inferred edge kinds in the Lot panel — the
 inference is geometric and a corner cut or an odd parcel can fool it.
 
+The same click brings the **site context** into the lot's frame, from City of Vancouver Open Data (not
+OpenStreetMap): the neighbouring buildings within 90 m as `building-footprints-2015` outlines, each named by
+the address of the parcel it stands on, with its height from the `building-footprints-2009` LiDAR footprint
+underneath it (or estimated — 8.5 m house / 3 m garage — when nothing matches, as for buildings newer than
+2009; the Context panel's tooltip says which); the `public-trees` street trees with their recorded height and
+a crown sized from the trunk diameter; and the street names from the `public-streets` hundred-block labels
+("2200 W 10TH AV" → "W 10th Ave"). The lot's own building is dropped. Neighbours, trees and street names show
+in the plan and the 3D view (toggles in the View dropdown), export to the Rhino `Context` layers, and travel
+with saved iterations. "Clear all" in the Context panel removes them. None of it enters the code analysis.
+
 Note: the live Open Data query was written against the documented API but could not be exercised from the
 build environment (no internet). First run it on a connected machine; if a dataset id or field has changed,
 fix it in `DATASETS`. The fixture mode (`CODESHEET_FIXTURE=1`) exercises the full picker offline.

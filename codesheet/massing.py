@@ -123,6 +123,22 @@ class ContextBuilding(BaseModel):
     name: str = "neighbour"
     footprint: Polygon
     height_m: float = Field(10.0, gt=0)
+    source: str = Field("", description="where it came from, e.g. 'CoV footprint 2015 · height 2009 LiDAR'; empty = drawn by hand")
+
+
+class ContextTree(BaseModel):
+    """A tree near the site (City of Vancouver public-trees), for the 3D view and the Rhino file only."""
+    x: float
+    y: float
+    height_m: float = Field(8.0, gt=0)
+    crown_m: float = Field(5.0, gt=0, description="crown diameter")
+    name: str = ""
+
+
+class StreetName(BaseModel):
+    """A named street centreline in lot coordinates; drawn as a label in the plan and the 3D view."""
+    name: str
+    line: list[list[float]] = Field(..., min_length=2)
 
 
 class MassingSpec(BaseModel):
@@ -130,6 +146,8 @@ class MassingSpec(BaseModel):
     lot: Lot
     blocks: list[BlockSpec]
     context: list[ContextBuilding] = Field(default_factory=list)
+    trees: list[ContextTree] = Field(default_factory=list)
+    streets: list[StreetName] = Field(default_factory=list)
     sprinklered: bool = True
     streets_faced: Optional[int] = Field(None, description="Override; else counted from lot edges of kind street/lane")
     chosen_articles: dict[str, str] = Field(default_factory=dict)

@@ -19,6 +19,7 @@ main{display:grid;grid-template-columns:1fr 340px;gap:0;min-height:0}
 #three{position:absolute;inset:0;width:100%;height:100%;display:block;background:var(--sky);cursor:grab} #three:active{cursor:grabbing}
 #labels3d{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .lbl3d{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:500 11px "IBM Plex Sans",sans-serif;color:var(--ink);background:var(--sheet-a);border:1px solid var(--rule);border-radius:999px;padding:1px 8px 1px 6px;box-shadow:0 1px 4px rgba(0,0,0,.08)} .lbl3d i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.lbl3d.street{font:600 10px "IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;letter-spacing:.12em;color:var(--ink2);border-radius:2px;padding:1px 6px;box-shadow:none}
 .ovl{position:absolute;background:var(--sheet-a);border:1px solid var(--rule);border-radius:4px;box-shadow:0 2px 12px rgba(0,0,0,.10);backdrop-filter:blur(3px)}
 .planBox{left:12px;bottom:12px;padding:6px 8px 8px} .planBox .bar{display:flex;align-items:center;gap:8px;font:600 11px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:5px;min-width:200px} .planBox .bar .sp{flex:1} .planBox .bar button{padding:0 5px;line-height:16px}
 #plan{width:340px;height:340px;max-width:calc(100vw - 400px);max-height:calc(100vh - 170px);display:block;background:var(--sheet);border:1px solid var(--rule);touch-action:none;user-select:none}
@@ -36,6 +37,7 @@ details.pane>.body{padding:2px 12px 12px} details.pane>.body .card{margin:8px 0}
 .blk{fill:rgba(42,120,214,.16);stroke:var(--blue);stroke-width:1.2;cursor:move} .blk.sel{fill:rgba(42,120,214,.28);stroke-width:2} .blk.ghost{fill:none;stroke:var(--blue);stroke-width:.5;stroke-dasharray:1 .8;pointer-events:none;opacity:.7}
 .hole{fill:var(--sheet);stroke:var(--blue);stroke-width:1;stroke-dasharray:1.4 .7;cursor:move} .ctx{fill:rgba(128,128,128,.22);stroke:var(--mut);stroke-width:.7;cursor:move} .ctx.sel{stroke:var(--ink);stroke-width:1.2}
 .vtx{fill:var(--sheet);stroke:var(--blue);stroke-width:1.5;cursor:grab} .vtx:hover{fill:var(--blue)} .vtx.h{stroke-dasharray:.8 .5}
+.stName{font:600 2.4px "IBM Plex Sans Condensed",sans-serif;fill:var(--mut);letter-spacing:.2px;text-transform:uppercase;pointer-events:none} .tree{fill:rgba(95,158,90,.26);stroke:#5f9e5a;stroke-width:.2;pointer-events:none} .tree.trunk{fill:#6b4f2a;stroke:none}
 .edgeLbl{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink2);pointer-events:none} .edgeH rect{fill:var(--sheet);stroke:var(--blue);stroke-width:.3} .edgeH text{font:2.1px "IBM Plex Mono",monospace;fill:var(--ink)} .edgeH:hover rect{fill:var(--blue-soft);stroke-width:.5} .edgeH.h rect{stroke-dasharray:.8 .5} .ctxLbl{font:2.2px "IBM Plex Sans",sans-serif;fill:var(--mut);pointer-events:none}
 .field{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;margin:4px 0} .field label{color:var(--ink2)} .field input,.field select{font:inherit;padding:3px 6px;border:1px solid var(--rule);border-radius:3px;width:120px;text-align:right;background:var(--sheet);color:var(--ink)}
 .field select{text-align:left}
@@ -96,6 +98,8 @@ table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:
     <div id="labels3d"></div>
     <details class="ovl viewBox" id="viewBox"><summary>View</summary><div class="vb">
       <label class="status"><input type="checkbox" id="chkLabels" checked> storey labels</label>
+      <label class="status"><input type="checkbox" id="chkStreets" checked> street names</label>
+      <label class="status"><input type="checkbox" id="chkTrees" checked> trees</label>
       <label class="status"><input type="checkbox" id="chkShadows" checked> shadows</label>
       <label class="status"><input type="checkbox" id="chkFaces" checked> face check (red: openings over the permitted %, amber: rated wall required)</label>
       <div class="sun"><span>Sun</span><input type="range" id="sunAz" min="0" max="360" value="215" title="azimuth"><span id="sunAzV" class="mono">215°</span><input type="range" id="sunAlt" min="5" max="85" value="48" title="altitude"><span id="sunAltV" class="mono">48°</span></div>
@@ -175,12 +179,12 @@ const fmt=v=>typeof v==="number"?(Number.isInteger(v)?v.toLocaleString():v.toLoc
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 function newSpec(){
-  return {project_name:"Untitled massing", sprinklered:true, chosen_articles:{}, context:[],
+  return {project_name:"Untitled massing", sprinklered:true, chosen_articles:{}, context:[], trees:[], streets:[],
     lot:{width_m:15.24, depth_m:37.19, grade_m:10, edges:{south:{kind:"street",row_width_m:20}, north:{kind:"lane",row_width_m:6}, east:{kind:"neighbour",row_width_m:0}, west:{kind:"neighbour",row_width_m:0}}},
     blocks:[{name:"A", footprint:[[0,0],[15.24,0],[15.24,30],[0,30]], holes:[], roof:{parapet_m:0.6,enclosure:null,balconies:[]}, first_floor_above_grade_m:0.1, default_glazing_pct:30, glazing_pct_by_edge:{},
       storeys:[{occupancy:"E",use:"retail CRU",floor_to_floor_m:3.5},{occupancy:"C",use:"apartment suites",floor_to_floor_m:3},{occupancy:"C",use:"apartment suites",floor_to_floor_m:3},{occupancy:"C",use:"apartment suites",floor_to_floor_m:3}]}]};
 }
-function normalize(s){ (s.blocks||[]).forEach(b=>{ b.glazing_pct_by_edge=b.glazing_pct_by_edge||{}; b.holes=b.holes||[]; b.roof=b.roof||{parapet_m:0.6,enclosure:null,balconies:[]}; b.roof.balconies=b.roof.balconies||[]; }); s.context=s.context||[]; s.chosen_articles=s.chosen_articles||{}; return s; }
+function normalize(s){ (s.blocks||[]).forEach(b=>{ b.glazing_pct_by_edge=b.glazing_pct_by_edge||{}; b.holes=b.holes||[]; b.roof=b.roof||{parapet_m:0.6,enclosure:null,balconies:[]}; b.roof.balconies=b.roof.balconies||[]; }); s.context=s.context||[]; s.trees=s.trees||[]; s.streets=s.streets||[]; s.chosen_articles=s.chosen_articles||{}; return s; }
 function polyArea(fp){ let s=0; for(let i=0;i<fp.length;i++){const p=fp[i],q=fp[(i+1)%fp.length]; s+=p[0]*q[1]-q[0]*p[1];} return Math.abs(s)/2; }
 function bbox(pts){ const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]); return [Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)]; }
 // outward unit normal of edge e (pts[e] → pts[e+1]), whichever way the polygon winds
@@ -225,9 +229,18 @@ $("#planSize").onclick=()=>{ savePanel("planBig",!panelState.planBig); applyPlan
 const svg = $("#plan");
 let drag = null;
 function planExtent(){ const L=spec.lot; let x0=0,y0=0,x1=L.width_m,y1=L.depth_m; if(L.polygon){ [x0,y0,x1,y1]=bbox(L.polygon); }
-  for(const c of spec.context||[]){ const [a,b,c2,d]=bbox(c.footprint); x0=Math.min(x0,a); y0=Math.min(y0,b); x1=Math.max(x1,c2); y1=Math.max(y1,d); }
+  // the plan frames the lot and its immediate neighbours; a whole block of Open Data footprints would shrink the lot to a stamp
+  const [lx0,ly0,lx1,ly1]=[x0,y0,x1,y1]; const near=bb=>bb[0]<lx1+25&&bb[2]>lx0-25&&bb[1]<ly1+25&&bb[3]>ly0-25;
+  for(const c of spec.context||[]){ const bb=bbox(c.footprint); if(!near(bb)) continue; const [a,b,c2,d]=bb; x0=Math.min(x0,a); y0=Math.min(y0,b); x1=Math.max(x1,c2); y1=Math.max(y1,d); }
   const E=L.edges||{}; if(!L.polygon){ x0=Math.min(x0,-(E.west?.row_width_m||0)/2-1); x1=Math.max(x1,L.width_m+(E.east?.row_width_m||0)/2+1); y0=Math.min(y0,-(E.south?.row_width_m||0)/2-1); y1=Math.max(y1,L.depth_m+(E.north?.row_width_m||0)/2+1); }
   return [x0,y0,x1,y1]; }
+// everything drawn, for the 3D ground: lot, every neighbour, tree and street
+function sceneExtent(){ let [x0,y0,x1,y1]=planExtent(); const add=(x,y)=>{ x0=Math.min(x0,x); y0=Math.min(y0,y); x1=Math.max(x1,x); y1=Math.max(y1,y); };
+  (spec.context||[]).forEach(c=>c.footprint.forEach(p=>add(p[0],p[1]))); (spec.trees||[]).forEach(t=>add(t.x,t.y)); (spec.streets||[]).forEach(s=>s.line.forEach(p=>add(p[0],p[1]))); return [x0,y0,x1,y1]; }
+// one label per street name, on the stretch of centreline nearest the lot
+function streetLabels(){ const L=spec.lot; const lb=L.polygon?bbox(L.polygon):[0,0,L.width_m,L.depth_m]; const lc=[(lb[0]+lb[2])/2,(lb[1]+lb[3])/2]; const best={};
+  (spec.streets||[]).forEach(st=>{ for(let i=0;i<st.line.length-1;i++){ const a=st.line[i],b=st.line[i+1]; const ux=b[0]-a[0],uy=b[1]-a[1]; const L2=ux*ux+uy*uy||1e-9; const t=clamp(((lc[0]-a[0])*ux+(lc[1]-a[1])*uy)/L2,0.1,0.9); const m=[a[0]+ux*t,a[1]+uy*t]; const d=Math.hypot(m[0]-lc[0],m[1]-lc[1]); if(!best[st.name]||d<best[st.name].d) best[st.name]={name:st.name,a,b,mid:m,d}; } });
+  return Object.values(best); }
 function planScale(){ const [x0,y0,x1,y1]=planExtent(); const span=Math.max(x1-x0,y1-y0); const pad=span*0.06; const size=span+2*pad; const cx=(x0+x1)/2, cy=(y0+y1)/2; return {size,ox:cx-size/2,oy:cy-size/2}; }
 function toSvg(x,y){ const {size,ox,oy}=planScale(); return [ (x-ox)/size*100, 100-(y-oy)/size*100 ]; }
 function fromSvg(sx,sy){ const {size,ox,oy}=planScale(); return [ sx/100*size+ox, (100-sy)/100*size+oy ]; }
@@ -254,8 +267,12 @@ function drawPlan(){
     [["south",[0,-E.south.row_width_m/2],[L.width_m,-E.south.row_width_m/2]],["north",[0,L.depth_m+E.north.row_width_m/2],[L.width_m,L.depth_m+E.north.row_width_m/2]],["east",[L.width_m+E.east.row_width_m/2,0],[L.width_m+E.east.row_width_m/2,L.depth_m]],["west",[-E.west.row_width_m/2,0],[-E.west.row_width_m/2,L.depth_m]]].forEach(([k,a,b])=>{ const c=cl(E[k].kind); if(c&&E[k].row_width_m){ const [ax,ay]=toSvg(...a),[bx,by]=toSvg(...b); h+=`<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${c}" stroke-width=".3" stroke-dasharray="2 1" opacity=".7"/>`; } });
   }
   // context buildings
-  (spec.context||[]).forEach((c,i)=>{ h+=`<polygon class="ctx ${i===ctxSel?"sel":""}" data-c="${i}" points="${ptsAttr(c.footprint)}"/>`; const [bx0,by0,bx1,by1]=bbox(c.footprint); const [cx,cy]=toSvg((bx0+bx1)/2,(by0+by1)/2); h+=`<text class="ctxLbl" x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle">${esc(c.name)} · ${fmt(c.height_m)} m</text>`;
+  const fewCtx=(spec.context||[]).length<=6;   // a whole block of Open Data footprints is drawn mute; names show on the selected one
+  (spec.context||[]).forEach((c,i)=>{ h+=`<polygon class="ctx ${i===ctxSel?"sel":""}" data-c="${i}" points="${ptsAttr(c.footprint)}"><title>${esc(c.name)} · ${fmt(c.height_m)} m</title></polygon>`; if(fewCtx||i===ctxSel){ const [bx0,by0,bx1,by1]=bbox(c.footprint); const [cx,cy]=toSvg((bx0+bx1)/2,(by0+by1)/2); h+=`<text class="ctxLbl" x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle">${esc(c.name)} · ${fmt(c.height_m)} m</text>`; }
     if(i===ctxSel) c.footprint.forEach((p,k)=>{ const [px,py]=toSvg(p[0],p[1]); h+=`<circle class="vtx" data-c="${i}" data-v="${k}" cx="${px}" cy="${py}" r="1.1"/>`; }); });
+  // trees and street names (City of Vancouver Open Data when the site came from the map)
+  if($("#chkTrees").checked) (spec.trees||[]).forEach(t=>{ const [cx,cy]=toSvg(t.x,t.y); const r=t.crown_m/2*s; if(cx<-r||cx>100+r||cy<-r||cy>100+r) return; h+=`<circle class="tree" cx="${cx}" cy="${cy}" r="${r}"/><circle class="tree trunk" cx="${cx}" cy="${cy}" r="${Math.max(.2,.18*s)}"/>`; });
+  if($("#chkStreets").checked) streetLabels().forEach(l=>{ const [ax,ay]=toSvg(l.a[0],l.a[1]),[bx,by]=toSvg(l.b[0],l.b[1]); const [mx,my]=toSvg(l.mid[0],l.mid[1]); if(mx<2||mx>98||my<2||my>98) return; const ang=Math.atan2(by-ay,bx-ax)*180/Math.PI, rot=(ang>90||ang<-90)?ang+180:ang; h+=`<text class="stName" transform="translate(${mx},${my}) rotate(${rot})" text-anchor="middle" dominant-baseline="middle">${esc(l.name)}</text>`; });
   // lot
   if(L.polygon){
     const kinds=L.edge_kinds||[];
@@ -391,8 +408,10 @@ function drawBlockPanel(){
   document.querySelectorAll(".eg").forEach(el=>el.onchange=()=>{ if(el.value==="") delete b.glazing_pct_by_edge[el.dataset.e]; else b.glazing_pct_by_edge[el.dataset.e]=+el.value; changed(); });
 }
 function drawCtxPanel(){
-  const C=spec.context||[];
-  $("#ctxPanel").innerHTML=C.length?C.map((c,i)=>`<div class="field" style="grid-template-columns:1fr auto auto"><input class="cName" data-i="${i}" value="${esc(c.name)}" style="text-align:left;width:auto;${i===ctxSel?"border-color:var(--blue)":""}"><input class="cH" data-i="${i}" type="number" step="0.5" min="1" value="${c.height_m}" style="width:64px" title="height (m)"><button class="sm ghost cDel" data-i="${i}">×</button></div>`).join("")+`<div class="hint">Neighbours are context for the 3D view and the Rhino file only — limiting distance is to the property line.</div>`:`<div class="hint">No neighbouring buildings drawn. They cast shadows in 3D and export to the Rhino <span class="mono">Context</span> layer.</div>`;
+  const C=spec.context||[]; const nt=(spec.trees||[]).length, ns=new Set((spec.streets||[]).map(s=>s.name)).size; const src=(C.find(c=>c.source)||{}).source;
+  const head=(src||nt||ns)?`<div class="hint" style="margin:0 0 6px">${src?`${esc(src.split(" · ")[0])} · `:""}${C.length} buildings${nt?` · ${nt} trees`:""}${ns?` · ${ns} street names`:""} · <a href="#" id="ctxClear" style="color:inherit">clear all</a></div>`:"";
+  $("#ctxPanel").innerHTML=head+(C.length?C.map((c,i)=>`<div class="field" style="grid-template-columns:1fr auto auto"><input class="cName" data-i="${i}" value="${esc(c.name)}" title="${esc(c.source||"drawn by hand")}" style="text-align:left;width:auto;${i===ctxSel?"border-color:var(--blue)":""}"><input class="cH" data-i="${i}" type="number" step="0.5" min="1" value="${c.height_m}" style="width:64px" title="height (m)"><button class="sm ghost cDel" data-i="${i}">×</button></div>`).join("")+`<div class="hint">Neighbours are context for the 3D view and the Rhino file only — limiting distance is to the property line.</div>`:`<div class="hint">No neighbouring buildings drawn. They cast shadows in 3D and export to the Rhino <span class="mono">Context</span> layer. Picking a site on the map brings the real neighbours, trees and street names from City of Vancouver Open Data.</div>`);
+  const cc=$("#ctxClear"); if(cc) cc.onclick=ev=>{ ev.preventDefault(); spec.context=[]; spec.trees=[]; spec.streets=[]; ctxSel=null; changed(); };
   document.querySelectorAll(".cName").forEach(el=>{ el.onchange=()=>{ C[+el.dataset.i].name=el.value; changed(); }; el.onfocus=()=>{ ctxSel=+el.dataset.i; drawPlan(); }; });
   document.querySelectorAll(".cH").forEach(el=>el.onchange=()=>{ C[+el.dataset.i].height_m=+el.value; changed(); });
   document.querySelectorAll(".cDel").forEach(el=>el.onclick=()=>{ C.splice(+el.dataset.i,1); ctxSel=null; changed(); });
@@ -415,7 +434,7 @@ canvas.addEventListener("pointermove",e=>{ if(!od) return; const dx=e.clientX-od
 canvas.addEventListener("wheel",e=>{ e.preventDefault(); orbit.r=clamp(orbit.r*(1+e.deltaY*0.001),0.25,4); render3d(); },{passive:false});
 canvas.addEventListener("dblclick",()=>{ orbit={th:-0.9,ph:0.95,r:1,pan:[0,0]}; render3d(); });
 ["sunAz","sunAlt"].forEach(id=>$("#"+id).addEventListener("input",()=>{ $("#sunAzV").textContent=$("#sunAz").value+"°"; $("#sunAltV").textContent=$("#sunAlt").value+"°"; render3d(); }));
-$("#chkShadows").onchange=()=>{ if(renderer){ renderer.shadowMap.enabled=$("#chkShadows").checked; build3d(); } }; $("#chkFaces").onchange=()=>build3d(); $("#chkLabels").onchange=()=>render3d();
+$("#chkShadows").onchange=()=>{ if(renderer){ renderer.shadowMap.enabled=$("#chkShadows").checked; build3d(); } }; $("#chkFaces").onchange=()=>build3d(); $("#chkLabels").onchange=()=>render3d(); $("#chkTrees").onchange=$("#chkStreets").onchange=()=>{ drawPlan(); build3d(); };
 // storey labels: one tag per run of consecutive storeys with the same occupancy and outline, projected onto the canvas by render3d()
 const OCC_NAME={C:"Residential",A2:"Assembly",E:"Retail",D:"Office",F3:"Parking / industrial",A1:"Theatre",B2:"Care",F2:"Industrial"};
 let labels3d=[];
@@ -425,17 +444,18 @@ function collectLabels(){ labels3d=[]; const many=spec.blocks.length>1;
       if(last&&last.key===key){ last.to=i+1; last.z1=z+s.floor_to_floor_m; } else runs.push({key,occ:s.occupancy,from:i+1,to:i+1,z0:z,z1:z+s.floor_to_floor_m,pts}); z+=s.floor_to_floor_m; });
     runs.forEach(r=>{ labels3d.push({pts:r.pts,y:(r.z0+r.z1)/2,color:OCC_COLOR[r.occ]||"#999",text:`${many?b.name+" · ":""}${OCC_NAME[r.occ]||r.occ} · ${r.from===r.to?`L${r.from}`:`L${r.from}–L${r.to}`}`}); });
     const en=b.roof.enclosure; if(en&&!/elevator|machine|stair|mechanical|service/i.test(en.use)) labels3d.push({pts:en.footprint,y:z+en.height_m/2,color:OCC_COLOR[en.occupancy]||"#999",text:`${many?b.name+" · ":""}Amenity · roof`}); });
+  if($("#chkStreets").checked) streetLabels().forEach(l=>labels3d.push({pts:[l.mid],y:0.3,kind:"street",text:l.name}));
 }
 // each tag sits on the outline point nearest the camera, i.e. on the facade you are looking at
 function placeLabels(){ const box=$("#labels3d"); if(!renderer||!$("#chkLabels").checked){ box.innerHTML=""; return; } const w=canvas.clientWidth,h=canvas.clientHeight; const v=new THREE.Vector3(); const cx=camera.position.x, cy=-camera.position.z; let html="";
   for(const l of labels3d){ let best=null, bd=Infinity; l.pts.forEach((p,i)=>{ const q=l.pts[(i+1)%l.pts.length]; for(const c of [p,[(p[0]+q[0])/2,(p[1]+q[1])/2]]){ const d=Math.hypot(c[0]-cx,c[1]-cy); if(d<bd){ bd=d; best=c; } } });
-    v.set(best[0],l.y,-best[1]).project(camera); if(v.z>1) continue; html+=`<span class="lbl3d" style="left:${((v.x+1)/2*w).toFixed(0)}px;top:${((1-v.y)/2*h).toFixed(0)}px"><i style="background:${l.color}"></i>${esc(l.text)}</span>`; }
+    v.set(best[0],l.y,-best[1]).project(camera); if(v.z>1||Math.abs(v.x)>1.1||Math.abs(v.y)>1.1) continue; html+=`<span class="lbl3d${l.kind?" "+l.kind:""}" style="left:${((v.x+1)/2*w).toFixed(0)}px;top:${((1-v.y)/2*h).toFixed(0)}px">${l.color?`<i style="background:${l.color}"></i>`:""}${esc(l.text)}</span>`; }
   box.innerHTML=html; }
 function shapeOf(pts,holes){ const sh=new THREE.Shape(pts.map(p=>new THREE.Vector2(p[0],p[1]))); (holes||[]).forEach(h=>{ const path=new THREE.Path(h.map(p=>new THREE.Vector2(p[0],p[1]))); sh.holes.push(path); }); return sh; }
 function build3d(){
   if(!renderer) return; massGroup.clear(); const L=spec.lot; const dark=isDark();
   const lotPts=L.polygon||[[0,0],[L.width_m,0],[L.width_m,L.depth_m],[0,L.depth_m]];
-  const [ex0,ey0,ex1,ey1]=planExtent(); const pad=Math.max(ex1-ex0,ey1-ey0)*0.6;
+  const [ex0,ey0,ex1,ey1]=sceneExtent(); const pad=Math.max(ex1-ex0,ey1-ey0)*0.6;
   // ground
   const gnd=new THREE.Mesh(new THREE.PlaneGeometry(ex1-ex0+2*pad,ey1-ey0+2*pad),new THREE.MeshLambertMaterial({color:dark?0x1b2027:0xe6e4dc})); gnd.rotation.x=-Math.PI/2; gnd.position.set((ex0+ex1)/2,-0.02,-(ey0+ey1)/2); gnd.receiveShadow=true; massGroup.add(gnd);
   // ROW bands
@@ -452,6 +472,10 @@ function build3d(){
   if(L.setbacks&&!L.polygon){ const sb=L.setbacks; const g=new THREE.EdgesGeometry(new THREE.ShapeGeometry(shapeOf([[sb.side,sb.front],[L.width_m-sb.side,sb.front],[L.width_m-sb.side,L.depth_m-sb.rear],[sb.side,L.depth_m-sb.rear]]))); g.rotateX(-Math.PI/2); const l=new THREE.LineSegments(g,new THREE.LineDashedMaterial({color:0xb26b00,dashSize:.6,gapSize:.4})); l.computeLineDistances(); l.position.y=0.02; massGroup.add(l); }
   // context
   (spec.context||[]).forEach(c=>{ const g=new THREE.ExtrudeGeometry(shapeOf(c.footprint),{depth:c.height_m,bevelEnabled:false}); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:dark?0x3a4048:0xbfc3c9})); m.castShadow=m.receiveShadow=true; massGroup.add(m); massGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:dark?0x6a717c:0x8a9098}))); });
+  // trees: a trunk up to the crown centre, a sphere for the crown (height and crown from the public-trees record)
+  if($("#chkTrees").checked&&(spec.trees||[]).length){ const trunkMat=new THREE.MeshLambertMaterial({color:dark?0x4e3a20:0x6b4f2a}), crownMat=new THREE.MeshLambertMaterial({color:dark?0x3f6f44:0x6aa864});
+    (spec.trees||[]).forEach(t=>{ const cr=t.crown_m/2, cz=Math.max(cr,t.height_m-cr); const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.2,cz,8),trunkMat); trunk.position.set(t.x,cz/2,-t.y); trunk.castShadow=true; massGroup.add(trunk);
+      const crown=new THREE.Mesh(new THREE.SphereGeometry(cr,12,9),crownMat); crown.position.set(t.x,cz,-t.y); crown.castShadow=crown.receiveShadow=true; massGroup.add(crown); }); }
   // blocks
   spec.blocks.forEach(b=>{ let z=b.first_floor_above_grade_m; let lastPts=b.footprint, lastHoles=b.holes;
     b.storeys.forEach((s,i)=>{ const pts=s.footprint||b.footprint, holes=s.holes!=null?s.holes:b.holes; lastPts=pts; lastHoles=holes;
