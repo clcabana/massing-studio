@@ -19,9 +19,9 @@ REPO_URL = "https://github.com/clcabana/massing-studio"
 
 def pages_site(out_dir: pathlib.Path) -> pathlib.Path:
     p = build_parts(lib_fallback="this browser only (localStorage)")
+    h1 = '<h1>Massing<br>Studio<small>VBBL 2025</small></h1>'
     body = p["body"].replace(
-        '<h1>Massing Studio<small>VBBL 2025</small></h1>',
-        f'<h1>Massing Studio<small>VBBL 2025</small></h1><a class="repo" href="{REPO_URL}" target="_blank" rel="noopener" title="Source on GitHub">source</a>', 1)
+        h1, f'{h1}<a class="repo" href="{REPO_URL}" target="_blank" rel="noopener" title="Source on GitHub">source</a>', 1)
     assert 'class="repo"' in body
     page = f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Massing Studio — VBBL 2025 massing and code check</title>

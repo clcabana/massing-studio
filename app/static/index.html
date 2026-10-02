@@ -3,35 +3,38 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="/vendor/leaflet.css">
 <style>
-:root{--paper:#f4f3ee;--sheet:#fff;--ink:#1e2126;--ink2:#4b5563;--mut:#7a8291;--rule:#d9d8d1;--mark:#c8352b;--mark-soft:#fbe9e7;--ok:#1d7a46;--ok-soft:#e3f3e9;--blue:#1d4f9c;--blue-soft:#e3eefc;--warn:#b26b00;--warn-soft:#fff3d6;--grid:#e8e6df;--sky:#eef0f3;--sheet-a:rgba(255,255,255,.93)}
-:root[data-theme="dark"]{--paper:#12151a;--sheet:#1a1e25;--ink:#e6e8eb;--ink2:#b6bcc7;--mut:#8b93a1;--rule:#2b313b;--mark:#f0786d;--mark-soft:#3a2321;--ok:#5ec98a;--ok-soft:#1d3327;--blue:#8fb4f0;--blue-soft:#1f2f4a;--warn:#e0a437;--warn-soft:#3a2f14;--grid:#232830;--sky:#0f1318;--sheet-a:rgba(26,30,37,.93)}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--paper:#12151a;--sheet:#1a1e25;--ink:#e6e8eb;--ink2:#b6bcc7;--mut:#8b93a1;--rule:#2b313b;--mark:#f0786d;--mark-soft:#3a2321;--ok:#5ec98a;--ok-soft:#1d3327;--blue:#8fb4f0;--blue-soft:#1f2f4a;--warn:#e0a437;--warn-soft:#3a2f14;--grid:#232830;--sky:#0f1318;--sheet-a:rgba(26,30,37,.93)} }
+:root{--paper:#f3f4f6;--sheet:#fff;--ink:#1e2126;--ink2:#4b5563;--mut:#7a8291;--rule:#e1e4e8;--mark:#c8352b;--mark-soft:#fbe9e7;--ok:#1d7a46;--ok-soft:#e3f3e9;--blue:#1d4f9c;--blue-soft:#e3eefc;--warn:#b26b00;--warn-soft:#fff3d6;--grid:#e4e7eb;--sky:#e9ebee;--sheet-a:rgba(255,255,255,.88);--float:0 1px 2px rgba(20,25,35,.05),0 10px 30px -14px rgba(20,25,35,.22)}
+:root[data-theme="dark"]{--paper:#12151a;--sheet:#1a1e25;--ink:#e6e8eb;--ink2:#b6bcc7;--mut:#8b93a1;--rule:#2b313b;--mark:#f0786d;--mark-soft:#3a2321;--ok:#5ec98a;--ok-soft:#1d3327;--blue:#8fb4f0;--blue-soft:#1f2f4a;--warn:#e0a437;--warn-soft:#3a2f14;--grid:#232830;--sky:#14171b;--sheet-a:rgba(26,30,37,.88);--float:0 1px 2px rgba(0,0,0,.35),0 10px 30px -14px rgba(0,0,0,.7)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){--paper:#12151a;--sheet:#1a1e25;--ink:#e6e8eb;--ink2:#b6bcc7;--mut:#8b93a1;--rule:#2b313b;--mark:#f0786d;--mark-soft:#3a2321;--ok:#5ec98a;--ok-soft:#1d3327;--blue:#8fb4f0;--blue-soft:#1f2f4a;--warn:#e0a437;--warn-soft:#3a2f14;--grid:#232830;--sky:#14171b;--sheet-a:rgba(26,30,37,.88);--float:0 1px 2px rgba(0,0,0,.35),0 10px 30px -14px rgba(0,0,0,.7)} }
 *{box-sizing:border-box} html,body{height:100%;margin:0}
-body{background:var(--paper);color:var(--ink);font:13px/1.4 "IBM Plex Sans",system-ui,sans-serif;display:grid;grid-template-rows:auto 1fr;height:100vh;overflow:hidden;transition:background .25s,color .25s}
+/* one continuous grey ground: the header, the 3D view and the sidebar share it; everything else floats on it */
+body{background:var(--sky);color:var(--ink);font:13px/1.4 "IBM Plex Sans",system-ui,sans-serif;display:grid;grid-template-rows:auto 1fr;height:100vh;overflow:hidden;transition:background .25s,color .25s}
 .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
-header{display:flex;align-items:center;gap:12px;padding:8px 14px;background:var(--sheet);border-bottom:1.5px solid var(--ink)}
-header h1{font:600 17px "IBM Plex Sans Condensed",sans-serif;margin:0;letter-spacing:.01em} header h1 small{font:500 10px "IBM Plex Mono",monospace;color:var(--mut);margin-left:6px;vertical-align:middle} header .sp{flex:1}
-header input{font:inherit;padding:4px 8px;border:1px solid var(--rule);border-radius:3px;min-width:220px;background:var(--sheet);color:var(--ink)}
-button{font:inherit;padding:5px 10px;border:1px solid var(--ink);background:var(--sheet);color:var(--ink);border-radius:3px;cursor:pointer;transition:background .15s} button:hover{background:var(--paper)} button.pri{background:var(--ink);color:var(--sheet)} button.pri:hover{opacity:.9} button.sm{padding:2px 7px;font-size:12px} button:disabled{opacity:.4;cursor:default} button.ghost{border-color:var(--rule);color:var(--ink2)}
+header{display:flex;align-items:center;gap:12px;padding:14px 18px 10px;background:transparent}
+header h1{font:500 24px/.92 "Helvetica Neue",Helvetica,Arial,sans-serif;margin:0;letter-spacing:-.025em;white-space:nowrap} header h1 small{font:500 9.5px/1 "IBM Plex Mono",monospace;color:var(--mut);margin-left:10px;letter-spacing:.06em;vertical-align:1px} header .sp{flex:1}
+header input{font:inherit;padding:5px 10px;border:1px solid transparent;border-radius:4px;min-width:220px;background:var(--sheet-a);color:var(--ink);box-shadow:var(--float)} header input:focus{outline:0;border-color:var(--rule)}
+button{font:inherit;padding:5px 10px;border:1px solid var(--ink);background:var(--sheet);color:var(--ink);border-radius:4px;cursor:pointer;transition:background .15s} button:hover{background:var(--paper)} button.pri{background:var(--ink);color:var(--sheet)} button.pri:hover{opacity:.9} button.sm{padding:2px 7px;font-size:12px} button:disabled{opacity:.4;cursor:default} button.ghost{border-color:transparent;background:transparent;color:var(--ink2)} button.ghost:hover{background:var(--sheet-a)}
+header>button{border-color:transparent;background:var(--sheet-a);box-shadow:var(--float)} header>button:hover{background:var(--sheet)} header>button.ghost{box-shadow:none;background:transparent} header>button.pri{background:var(--ink);color:var(--sheet)}
 main{display:grid;grid-template-columns:1fr 340px;gap:0;min-height:0}
 /* the stage: the 3D view fills it, the plan editor and the view controls float over it */
 .stage{position:relative;min-height:0;background:var(--sky);overflow:hidden}
 #three{position:absolute;inset:0;width:100%;height:100%;display:block;background:var(--sky);cursor:grab} #three:active{cursor:grabbing}
 #labels3d{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.lbl3d{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:500 11px "IBM Plex Sans",sans-serif;color:var(--ink);background:var(--sheet-a);border:1px solid var(--rule);border-radius:999px;padding:1px 8px 1px 6px;box-shadow:0 1px 4px rgba(0,0,0,.08)} .lbl3d i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.lbl3d{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:500 11px "IBM Plex Sans",sans-serif;color:var(--ink);background:var(--sheet-a);border-radius:999px;padding:1px 8px 1px 6px;box-shadow:0 1px 4px rgba(0,0,0,.08)} .lbl3d i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .lbl3d.street{font:600 10px "IBM Plex Sans Condensed",sans-serif;text-transform:uppercase;letter-spacing:.12em;color:var(--ink2);border-radius:2px;padding:1px 6px;box-shadow:none}
-.ovl{position:absolute;background:var(--sheet-a);border:1px solid var(--rule);border-radius:4px;box-shadow:0 2px 12px rgba(0,0,0,.10);backdrop-filter:blur(3px)}
+.ovl{position:absolute;background:var(--sheet-a);border-radius:6px;box-shadow:var(--float);backdrop-filter:blur(6px)}
 .planBox{left:12px;bottom:12px;padding:6px 8px 8px} .planBox .bar{display:flex;align-items:center;gap:8px;font:600 11px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:5px;min-width:200px} .planBox .bar .sp{flex:1} .planBox .bar button{padding:0 5px;line-height:16px}
 #plan{width:340px;height:340px;max-width:calc(100vw - 400px);max-height:calc(100vh - 170px);display:block;background:var(--sheet);border:1px solid var(--rule);touch-action:none;user-select:none}
 .planBox.big #plan{width:580px;height:580px} .planBox.min #plan,.planBox.min .planHelp,.planBox.min .legend{display:none}
 .planHelp{max-width:340px} .planBox.big .planHelp{max-width:580px} .planHelp summary{cursor:pointer;color:var(--mut);font-size:11px;margin-top:5px;list-style:none} .planHelp summary::-webkit-details-marker{display:none} .planHelp summary:before{content:"▸ "} .planHelp[open] summary:before{content:"▾ "} .planHelp .hint{margin-top:3px}
 .viewBox{right:12px;top:12px;padding:0;font-size:11.5px;color:var(--ink2);min-width:0} .viewBox summary{cursor:pointer;list-style:none;padding:5px 10px;font:600 11px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)} .viewBox summary::-webkit-details-marker{display:none} .viewBox summary:before{content:"▸ "} .viewBox[open] summary:before{content:"▾ "} .viewBox .vb{padding:0 10px 8px;width:260px} .viewBox .vb label.status{display:block;margin:3px 0}
 .sun{display:grid;grid-template-columns:auto 1fr auto 1fr auto;gap:6px 8px;align-items:center;font-size:11.5px;color:var(--ink2);margin-top:6px} .sun input[type=range]{width:100%}
-/* the sidebar: every panel is a dropdown */
-.side{min-height:0;overflow:auto;border-left:1px solid var(--rule);background:var(--sheet)}
-details.pane{border-bottom:1px solid var(--rule)} details.pane>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:9px 12px;font:600 11.5px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);user-select:none} details.pane>summary::-webkit-details-marker{display:none}
-details.pane>summary:before{content:"▸";font-size:10px;width:10px;color:var(--mut);transition:transform .15s} details.pane[open]>summary:before{transform:rotate(90deg)} details.pane>summary .sp{flex:1} details.pane>summary:hover{background:var(--paper)} details.pane>summary .acts{display:flex;gap:4px;text-transform:none;letter-spacing:0} details.pane>summary .status{text-transform:none;letter-spacing:0;font-weight:400}
-details.pane>.body{padding:2px 12px 12px} details.pane>.body .card{margin:8px 0}
+/* the sidebar: every panel is a dropdown that floats on the same grey as the 3D view (no rule between them) */
+.side{min-height:0;overflow:auto;background:transparent;padding:12px 12px 12px 0;scrollbar-width:thin;scrollbar-color:var(--rule) transparent}
+details.pane{background:var(--sheet-a);border-radius:6px;box-shadow:var(--float);backdrop-filter:blur(6px);margin:0 0 8px} .side>details.pane:first-child{margin-top:0}
+details.pane>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:9px 12px;font:600 11.5px "IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);user-select:none;border-radius:6px} details.pane>summary::-webkit-details-marker{display:none}
+details.pane>summary:before{content:"▸";font-size:10px;width:10px;color:var(--mut);transition:transform .15s} details.pane[open]>summary:before{transform:rotate(90deg)} details.pane>summary .sp{flex:1} details.pane>summary:hover{color:var(--ink2)} details.pane>summary .acts{display:flex;gap:4px;text-transform:none;letter-spacing:0} details.pane>summary .status{text-transform:none;letter-spacing:0;font-weight:400}
+details.pane>.body{padding:2px 12px 12px} details.pane>.body .card{margin:8px 0;background:var(--sheet);border-color:var(--rule)}
 .lotEdge{cursor:pointer} .lotEdge text{font:2.3px "IBM Plex Mono",monospace;fill:var(--ink2)} .lotEdge rect{fill:var(--sheet);stroke:var(--rule)}
 .lotSeg{stroke-width:.9} .lotSeg.street{stroke:#c8352b} .lotSeg.lane{stroke:#b26b00;stroke-dasharray:1.2 .6} .lotSeg.neighbour{stroke:var(--ink);stroke-dasharray:1.6 .8}
 .blk{fill:rgba(42,120,214,.16);stroke:var(--blue);stroke-width:1.2;cursor:move} .blk.sel{fill:rgba(42,120,214,.28);stroke-width:2} .blk.ghost{fill:none;stroke:var(--blue);stroke-width:.5;stroke-dasharray:1 .8;pointer-events:none;opacity:.7}
@@ -76,11 +79,11 @@ table.sum{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixe
 table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:top;overflow-wrap:anywhere} table.sum td.blk{width:7%;color:var(--mut);font-size:10px;text-transform:uppercase} table.sum td.val{width:16%} table.sum td.why{width:44%;color:var(--ink2);font-size:11px} table.sum td.ref{width:17%}
 .cite{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--blue);background:var(--blue-soft);padding:0 5px;border-radius:3px;margin:1px 2px 1px 0} sup.fl{color:var(--mark)} ul.fl{margin:0;padding-left:16px;font-size:12px} ul.fl li{margin:2px 0}
 @media print{ body>*:not(#dlgSum){display:none!important} #dlgSum{position:static;border:0;max-height:none;width:auto} .sumhead button{display:none} }
-@media (max-width:900px){ body{height:auto;overflow:auto;display:block} main{display:block} .stage{height:72vh} .side{border-left:0;border-top:1px solid var(--rule)} header{flex-wrap:wrap} header input{min-width:160px;flex:1} #plan{width:260px;height:260px;max-width:calc(100vw - 60px)} .planBox.big #plan{width:min(580px,calc(100vw - 60px));height:min(580px,calc(100vw - 60px))} }
+@media (max-width:900px){ body{height:auto;overflow:auto;display:block} main{display:block} .stage{height:72vh} .side{padding:12px} header{flex-wrap:wrap} header input{min-width:160px;flex:1} #plan{width:260px;height:260px;max-width:calc(100vw - 60px)} .planBox.big #plan{width:min(580px,calc(100vw - 60px));height:min(580px,calc(100vw - 60px))} }
 </style></head>
 <body>
 <header>
-  <h1>Massing Studio<small>VBBL 2025</small></h1>
+  <h1>Massing<br>Studio<small>VBBL 2025</small></h1>
   <input id="projName" value="Untitled massing" title="Project name — iterations are grouped by it">
   <span class="status" id="status">ready</span>
   <span class="sp"></span>
@@ -106,7 +109,7 @@ table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:
       <div class="hint">Drag to orbit · right-drag or <kbd>Shift</kbd>-drag to pan · scroll to zoom · double-click to reset.</div>
     </div></details>
     <div class="ovl planBox" id="planBox">
-      <div class="bar">Plan <span class="legend"><span><i style="background:#2a78d6"></i>C</span><span><i style="background:#eb6834"></i>A2</span><span><i style="background:#e87ba4"></i>E</span><span><i style="background:#eda100"></i>D</span><span><i style="background:#1baf7a"></i>F3</span></span><span class="sp"></span><button class="sm ghost" id="planSize" title="Larger / smaller plan">⤢</button><button class="sm ghost" id="planMin" title="Hide / show the plan">▾</button></div>
+      <div class="bar">Plan <span class="legend"><span><i style="background:#6b93d1"></i>C</span><span><i style="background:#df9a74"></i>A2</span><span><i style="background:#d693b1"></i>E</span><span><i style="background:#d9b55f"></i>D</span><span><i style="background:#6fb59c"></i>F3</span></span><span class="sp"></span><button class="sm ghost" id="planSize" title="Larger / smaller plan">⤢</button><button class="sm ghost" id="planMin" title="Hide / show the plan">▾</button></div>
       <svg id="plan" viewBox="0 0 100 100"></svg>
       <details class="planHelp"><summary>How to edit</summary>
         <div class="hint">Drag a corner to reshape, drag a wall's length tag to push or pull that wall (courtyard walls too), drag a body to move, double-click an edge to add a corner, <kbd>Alt</kbd>-click a corner to remove it. Click a storey number in the Blocks panel to edit that storey's own outline. Click a lot edge label to cycle street / lane / neighbour. <kbd>⌘Z</kbd> undo.</div>
@@ -165,7 +168,8 @@ table.sum td{padding:4px 5px;border-bottom:1px solid var(--rule);vertical-align:
 <script>
 // ------------------------------------------------------------------ state
 const OCC = ["C","A2","E","D","F3","A1","B2","F2"];
-const OCC_COLOR = {C:"#2a78d6",A2:"#eb6834",E:"#e87ba4",D:"#eda100",F3:"#1baf7a",A1:"#c6521f",B2:"#4a3aa7",F2:"#008300"};
+// occupancy colours: a muted diagram palette (same hues as before, less saturation) so the massing reads against the grey ground without glare
+const OCC_COLOR = {C:"#6b93d1",A2:"#df9a74",E:"#d693b1",D:"#d9b55f",F3:"#6fb59c",A1:"#c98466",B2:"#8c82c2",F2:"#7aa278"};
 let spec = newSpec();
 let sel = 0;            // selected block index
 let editStorey = null;  // null = block outline, else 1-based storey number being edited
@@ -426,7 +430,7 @@ $("#btnExample").onclick=async()=>{ spec=normalize(await apiExample()); sel=0; e
 const canvas=$("#three"); let renderer=null, scene=null, sun=null, hemi=null;
 try{ renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true}); renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; scene=new THREE.Scene(); }catch(e){ console.warn("3D unavailable:",e); }
 const camera=new THREE.PerspectiveCamera(36,2,0.1,3000); let massGroup=new THREE.Group();
-if(scene){ hemi=new THREE.HemisphereLight(0xffffff,0x8892a0,.75); scene.add(hemi); sun=new THREE.DirectionalLight(0xfff4e0,1.1); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-0.0006; scene.add(sun); scene.add(sun.target); scene.add(massGroup); }
+if(scene){ hemi=new THREE.HemisphereLight(0xffffff,0x9aa1ab,.65); scene.add(hemi); sun=new THREE.DirectionalLight(0xfff8ee,1.0); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.bias=-0.0006; scene.add(sun); scene.add(sun.target); scene.add(massGroup); }
 let orbit={th:-0.9,ph:0.95,r:1,pan:[0,0]}; let od=null;
 canvas.addEventListener("contextmenu",e=>e.preventDefault());
 canvas.addEventListener("pointerdown",e=>{od={x:e.clientX,y:e.clientY,btn:e.button,shift:e.shiftKey}; canvas.setPointerCapture(e.pointerId);}); canvas.addEventListener("pointerup",()=>od=null);
@@ -456,10 +460,13 @@ function build3d(){
   if(!renderer) return; massGroup.clear(); const L=spec.lot; const dark=isDark();
   const lotPts=L.polygon||[[0,0],[L.width_m,0],[L.width_m,L.depth_m],[0,L.depth_m]];
   const [ex0,ey0,ex1,ey1]=sceneExtent(); const pad=Math.max(ex1-ex0,ey1-ey0)*0.6;
+  // palette: a quiet grey ground so the massing (occupancy colours) is the only thing with colour
+  const P=dark?{ground:0x1b1f25,lot:0x242931,line:0x7c848f,street:0x2a2a2e,lane:0x2b2a26,ctx:0x343a42,ctxEdge:0x565d67,edge:0xffffff,edgeA:.18,parapet:0x6e7680,balcony:0x8c949e,svc:0x59616c,bg:0x14171b,hemiGround:0x1a1e25}
+               :{ground:0xe0e3e7,lot:0xd3d7dc,line:0x8a919b,street:0xdcd8da,lane:0xdddad2,ctx:0xcdd1d6,ctxEdge:0xa3a9b1,edge:0x2a2f36,edgeA:.16,parapet:0xc6cbd1,balcony:0xe8eaed,svc:0xb3b9c0,bg:0xe9ebee,hemiGround:0x9aa1ab};
   // ground
-  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(ex1-ex0+2*pad,ey1-ey0+2*pad),new THREE.MeshLambertMaterial({color:dark?0x1b2027:0xe6e4dc})); gnd.rotation.x=-Math.PI/2; gnd.position.set((ex0+ex1)/2,-0.02,-(ey0+ey1)/2); gnd.receiveShadow=true; massGroup.add(gnd);
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(ex1-ex0+2*pad,ey1-ey0+2*pad),new THREE.MeshLambertMaterial({color:P.ground})); gnd.rotation.x=-Math.PI/2; gnd.position.set((ex0+ex1)/2,-0.02,-(ey0+ey1)/2); gnd.receiveShadow=true; massGroup.add(gnd);
   // ROW bands
-  if(!L.polygon){ const E=L.edges; const bandMat=k=>new THREE.MeshLambertMaterial({color:k==="street"?(dark?0x3a2a2a:0xf1dcd9):(dark?0x3a3324:0xf0e5c8),transparent:true,opacity:.9});
+  if(!L.polygon){ const E=L.edges; const bandMat=k=>new THREE.MeshLambertMaterial({color:k==="street"?P.street:P.lane,transparent:true,opacity:.9});
     const band=(x,z,w,d,k)=>{ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),bandMat(k)); m.rotation.x=-Math.PI/2; m.position.set(x,-0.01,z); m.receiveShadow=true; massGroup.add(m); };
     if(E.south.kind!=="neighbour") band(L.width_m/2, E.south.row_width_m/2, L.width_m+2*L.width_m, E.south.row_width_m, E.south.kind);
     if(E.north.kind!=="neighbour") band(L.width_m/2, -L.depth_m-E.north.row_width_m/2, L.width_m+2*L.width_m, E.north.row_width_m, E.north.kind);
@@ -467,11 +474,11 @@ function build3d(){
     if(E.west.kind!=="neighbour") band(-E.west.row_width_m/2, -L.depth_m/2, E.west.row_width_m, L.depth_m+2*L.depth_m, E.west.kind); }
   // lot surface + property line
   const lotGeo=new THREE.ShapeGeometry(shapeOf(lotPts)); lotGeo.rotateX(-Math.PI/2);
-  const lot=new THREE.Mesh(lotGeo,new THREE.MeshLambertMaterial({color:dark?0x262d2a:0xdfe3d3})); lot.position.y=0; lot.receiveShadow=true; massGroup.add(lot);
-  massGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(lotGeo),new THREE.LineBasicMaterial({color:dark?0xe6e8eb:0x1e2126})));
+  const lot=new THREE.Mesh(lotGeo,new THREE.MeshLambertMaterial({color:P.lot})); lot.position.y=0; lot.receiveShadow=true; massGroup.add(lot);
+  massGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(lotGeo),new THREE.LineBasicMaterial({color:P.line})));
   if(L.setbacks&&!L.polygon){ const sb=L.setbacks; const g=new THREE.EdgesGeometry(new THREE.ShapeGeometry(shapeOf([[sb.side,sb.front],[L.width_m-sb.side,sb.front],[L.width_m-sb.side,L.depth_m-sb.rear],[sb.side,L.depth_m-sb.rear]]))); g.rotateX(-Math.PI/2); const l=new THREE.LineSegments(g,new THREE.LineDashedMaterial({color:0xb26b00,dashSize:.6,gapSize:.4})); l.computeLineDistances(); l.position.y=0.02; massGroup.add(l); }
   // context
-  (spec.context||[]).forEach(c=>{ const g=new THREE.ExtrudeGeometry(shapeOf(c.footprint),{depth:c.height_m,bevelEnabled:false}); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:dark?0x3a4048:0xbfc3c9})); m.castShadow=m.receiveShadow=true; massGroup.add(m); massGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:dark?0x6a717c:0x8a9098}))); });
+  (spec.context||[]).forEach(c=>{ const g=new THREE.ExtrudeGeometry(shapeOf(c.footprint),{depth:c.height_m,bevelEnabled:false}); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:P.ctx})); m.castShadow=m.receiveShadow=true; massGroup.add(m); massGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:P.ctxEdge}))); });
   // trees: a trunk up to the crown centre, a sphere for the crown (height and crown from the public-trees record)
   if($("#chkTrees").checked&&(spec.trees||[]).length){ const trunkMat=new THREE.MeshLambertMaterial({color:dark?0x4e3a20:0x6b4f2a}), crownMat=new THREE.MeshLambertMaterial({color:dark?0x3f6f44:0x6aa864});
     (spec.trees||[]).forEach(t=>{ const cr=t.crown_m/2, cz=Math.max(cr,t.height_m-cr); const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.2,cz,8),trunkMat); trunk.position.set(t.x,cz/2,-t.y); trunk.castShadow=true; massGroup.add(trunk);
@@ -480,22 +487,22 @@ function build3d(){
   spec.blocks.forEach(b=>{ let z=b.first_floor_above_grade_m; let lastPts=b.footprint, lastHoles=b.holes;
     b.storeys.forEach((s,i)=>{ const pts=s.footprint||b.footprint, holes=s.holes!=null?s.holes:b.holes; lastPts=pts; lastHoles=holes;
       const g=new THREE.ExtrudeGeometry(shapeOf(pts,holes),{depth:s.floor_to_floor_m-0.06,bevelEnabled:false}); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:OCC_COLOR[s.occupancy]||0x999999})); m.position.y=z; m.castShadow=m.receiveShadow=true; massGroup.add(m);
-      const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:dark?0xffffff:0x1e2126,transparent:true,opacity:dark?.25:.35})); e.position.y=z; massGroup.add(e);
+      const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:P.edge,transparent:true,opacity:P.edgeA})); e.position.y=z; massGroup.add(e);
       // balconies
       (b.roof.balconies||[]).forEach(bl=>{ if(i===0&&!bl.storeys) return; if(bl.storeys&&!bl.storeys.includes(i+1)) return; const fp=b.footprint; const a=fp[bl.edge%fp.length], q=fp[(bl.edge+1)%fp.length]; if(!a||!q) return; const ux=q[0]-a[0], uy=q[1]-a[1]; const len=Math.hypot(ux,uy)||1; const nx=uy/len, ny=-ux/len; const ccw=polyArea(fp)>0&&(fp.reduce((acc,p,k)=>{const r=fp[(k+1)%fp.length]; return acc+p[0]*r[1]-r[0]*p[1];},0)>0); const sgn=ccw?1:-1;
-        const sh=shapeOf([[a[0]+ux*0.1,a[1]+uy*0.1],[q[0]-ux*0.1,q[1]-uy*0.1],[q[0]-ux*0.1+sgn*nx*bl.depth_m,q[1]-uy*0.1+sgn*ny*bl.depth_m],[a[0]+ux*0.1+sgn*nx*bl.depth_m,a[1]+uy*0.1+sgn*ny*bl.depth_m]]); const bg=new THREE.ExtrudeGeometry(sh,{depth:0.18,bevelEnabled:false}); bg.rotateX(-Math.PI/2); const bm=new THREE.Mesh(bg,new THREE.MeshLambertMaterial({color:dark?0x9aa3ad:0xf4f4f4})); bm.position.y=z; bm.castShadow=true; massGroup.add(bm); });
+        const sh=shapeOf([[a[0]+ux*0.1,a[1]+uy*0.1],[q[0]-ux*0.1,q[1]-uy*0.1],[q[0]-ux*0.1+sgn*nx*bl.depth_m,q[1]-uy*0.1+sgn*ny*bl.depth_m],[a[0]+ux*0.1+sgn*nx*bl.depth_m,a[1]+uy*0.1+sgn*ny*bl.depth_m]]); const bg=new THREE.ExtrudeGeometry(sh,{depth:0.18,bevelEnabled:false}); bg.rotateX(-Math.PI/2); const bm=new THREE.Mesh(bg,new THREE.MeshLambertMaterial({color:P.balcony})); bm.position.y=z; bm.castShadow=true; massGroup.add(bm); });
       z+=s.floor_to_floor_m; });
     // parapet: a thin wall along each outer edge (works for any outline)
     if(b.roof.parapet_m>0){ const pts=lastPts; const sgn=(pts.reduce((acc,p,k)=>{const r=pts[(k+1)%pts.length]; return acc+p[0]*r[1]-r[0]*p[1];},0)>0)?1:-1;
       pts.forEach((a,k)=>{ const q=pts[(k+1)%pts.length]; const ux=q[0]-a[0], uy=q[1]-a[1]; const len=Math.hypot(ux,uy)||1; const nx=-uy/len*sgn, ny=ux/len*sgn; const tth=0.2;
-        const sh=shapeOf([[a[0],a[1]],[q[0],q[1]],[q[0]+nx*tth,q[1]+ny*tth],[a[0]+nx*tth,a[1]+ny*tth]]); const g=new THREE.ExtrudeGeometry(sh,{depth:b.roof.parapet_m,bevelEnabled:false}); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:dark?0x7d8590:0xd8dbe0})); m.position.y=z-0.06; m.castShadow=true; massGroup.add(m); }); }
+        const sh=shapeOf([[a[0],a[1]],[q[0],q[1]],[q[0]+nx*tth,q[1]+ny*tth],[a[0]+nx*tth,a[1]+ny*tth]]); const g=new THREE.ExtrudeGeometry(sh,{depth:b.roof.parapet_m,bevelEnabled:false}); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:P.parapet})); m.position.y=z-0.06; m.castShadow=true; massGroup.add(m); }); }
     // enclosure
-    if(b.roof.enclosure){ const en=b.roof.enclosure; const g=new THREE.ExtrudeGeometry(shapeOf(en.footprint),{depth:en.height_m,bevelEnabled:false}); g.rotateX(-Math.PI/2); const svc=/elevator|machine|stair|mechanical|service/i.test(en.use); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:svc?(dark?0x5c6572:0xaab0b8):OCC_COLOR[en.occupancy]||0x2a78d6})); m.position.y=z; m.castShadow=true; massGroup.add(m); const el=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:dark?0xffffff:0x1e2126,transparent:true,opacity:.3})); el.position.y=z; massGroup.add(el); }
+    if(b.roof.enclosure){ const en=b.roof.enclosure; const g=new THREE.ExtrudeGeometry(shapeOf(en.footprint),{depth:en.height_m,bevelEnabled:false}); g.rotateX(-Math.PI/2); const svc=/elevator|machine|stair|mechanical|service/i.test(en.use); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:svc?P.svc:OCC_COLOR[en.occupancy]||OCC_COLOR.C})); m.position.y=z; m.castShadow=true; massGroup.add(m); const el=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:P.edge,transparent:true,opacity:P.edgeA})); el.position.y=z; massGroup.add(el); }
   });
   // compliance faces: red where openings exceed the permitted %, green-tinted where a wall FRR is required
   if($("#chkFaces").checked&&results&&results.building){ for(const f of results.building.exterior_faces){ const r=results.faces[f.label]; if(!r) continue; const s=f.start, e=f.end; const sx=s.x??s[0], sy=s.y??s[1], ex=e.x??e[0], ey=e.y??e[1]; const g=spec.lot.grade_m;
-      for(const band of r.bands){ if(band.ok&&!band.frr_min) continue; const z0=band.z0-g, z1=band.z1-g; const len=Math.hypot(ex-sx,ey-sy); const geo=new THREE.PlaneGeometry(len,z1-z0); const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:band.ok?0xe0a437:0xf0453a,transparent:true,opacity:band.ok?.28:.55,side:THREE.DoubleSide,depthWrite:false})); const ang=Math.atan2(ey-sy,ex-sx); m.position.set((sx+ex)/2,(z0+z1)/2,-(sy+ey)/2); m.rotation.y=ang; const nx=(ey-sy)/len, ny=-(ex-sx)/len; m.position.x+=nx*0.06; m.position.z-=ny*0.06; massGroup.add(m); } } }
-  scene.background=new THREE.Color(dark?0x0f1318:0xeef0f3); if(hemi) hemi.groundColor=new THREE.Color(dark?0x1a1e25:0x8892a0);
+      for(const band of r.bands){ if(band.ok&&!band.frr_min) continue; const z0=band.z0-g, z1=band.z1-g; const len=Math.hypot(ex-sx,ey-sy); const geo=new THREE.PlaneGeometry(len,z1-z0); const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:band.ok?0xd9a648:0xd9574c,transparent:true,opacity:band.ok?.26:.48,side:THREE.DoubleSide,depthWrite:false})); const ang=Math.atan2(ey-sy,ex-sx); m.position.set((sx+ex)/2,(z0+z1)/2,-(sy+ey)/2); m.rotation.y=ang; const nx=(ey-sy)/len, ny=-(ex-sx)/len; m.position.x+=nx*0.06; m.position.z-=ny*0.06; massGroup.add(m); } } }
+  scene.background=new THREE.Color(P.bg); if(hemi) hemi.groundColor=new THREE.Color(P.hemiGround);
   collectLabels();
   render3d();
 }
