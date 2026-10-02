@@ -8,7 +8,7 @@ render_html()  lays them out as an A3 landscape sheet: title block, numbered
                a reviewer-flags panel, and an honest "not covered" panel.
                Clause references are links to `<edition>.pdf#page=N`, so if
                the bylaw PDF sits beside the sheet, clicking opens the page.
-to_pdf()       prints the HTML with Chromium (Playwright) at A3 landscape.
+The same SheetData becomes an Excel workbook with codesheet.xlsx_sheet.to_xlsx().
 
 The sheet is a DRAFT for a registered professional's review. It says so.
 """
@@ -209,28 +209,14 @@ sup.fl{{color:var(--mark);font-size:7pt;margin-left:1px}}
 </div></body></html>"""
 
 
-def to_pdf(html_path: pathlib.Path, pdf_path: pathlib.Path):
-    import asyncio
-    from playwright.async_api import async_playwright
-
-    async def run():
-        async with async_playwright() as p:
-            br = await p.chromium.launch()
-            pg = await br.new_page()
-            await pg.goto(html_path.resolve().as_uri())
-            await pg.wait_for_timeout(500)
-            await pg.pdf(path=str(pdf_path), format="A3", landscape=True, print_background=True,
-                         margin={"top": "10mm", "bottom": "10mm", "left": "10mm", "right": "10mm"})
-            await br.close()
-    asyncio.run(run())
-
-
 if __name__ == "__main__":
     import sys
     sys.path[:0] = [str(ROOT), str(ROOT / "data" / "projects")]
     from courtyard_commons import project
+    from codesheet.xlsx_sheet import to_xlsx
     sd = run_all(project, chosen={"North": "3.2.2.51", "South": "3.2.2.51"})
     out = ROOT / "out" / "example_code_sheet.html"
+    out.parent.mkdir(exist_ok=True)
     out.write_text(render_html(sd), encoding="utf-8")
-    to_pdf(out, ROOT / "out" / "example_code_sheet.pdf")
-    print("wrote", out, "and PDF;", sum(len(s.dets) for s in sd.sections), "lines,", len(sd.flags), "flags")
+    to_xlsx(sd, ROOT / "out" / "example_code_sheet.xlsx")
+    print("wrote", out, "and .xlsx;", sum(len(s.dets) for s in sd.sections), "lines,", len(sd.flags), "flags")

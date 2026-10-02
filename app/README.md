@@ -1,13 +1,12 @@
 # Massing Studio (local)
 
 A designer-facing front end for the codesheet engine. Drag a massing, watch
-the code compliance update live, save iterations you like (each with a PDF
+the code compliance update live, save iterations you like (each with an Excel
 code compliance summary), reopen and compare them later.
 
 ## Run
 
-    pip install -r requirements.txt          # fastapi, uvicorn, pydantic, plotly, pypdf, playwright
-    python -m playwright install chromium    # once, for PDF export
+    pip install -r requirements.txt          # fastapi, uvicorn, pydantic, plotly, pypdf, openpyxl
     python -m app.server --projects ./projects --port 8765
 
 then open http://127.0.0.1:8765
@@ -142,13 +141,26 @@ footprint edge to the lot boundary, so angled and irregular parcels are handled.
 
 Every line in the saved summary cites its clause and page.
 
+## Code summary and Excel export
+
+**Code summary** opens the compliance summary for the massing on screen. **Export to Excel** downloads
+it as a workbook (`/api/summary.xlsx`), and every saved iteration gets the same workbook with an
+**Excel** link in the Saved iterations list. The workbook has three sheets:
+
+* **Code summary** — title block, draft stamp, then sections 1–9 and appendices A–C as separate tables
+  (Block, Item, Value, Unit, Basis, Clause, Page, Flags), laid out like the printed sheet.
+* **Determinations** — one row per determination with a filter row and frozen header: section, block,
+  item, machine key, value, unit, basis, clause, edition, page, flags. Values stay numeric, so the sheet
+  can feed formulas or a pivot table.
+* **Flags & notes** — reviewer flags, model notes, and what the draft does not cover.
+
 ## Saved iterations
 
     projects/<project>/iterations/<timestamp>-<name>/
         spec.json       the massing you drew
         results.json    every determination, headroom, faces, flags
         summary.html    the code compliance summary (clause links open the bylaw PDF if stored beside it)
-        summary.pdf     the same, A3 landscape
+        summary.xlsx    the same as an Excel workbook (see above)
         thumb.png       3D thumbnail
 
 ## Known limitations

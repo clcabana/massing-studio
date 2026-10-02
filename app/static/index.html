@@ -218,6 +218,7 @@ const themeKey="massing-studio-theme";
 // the 3D palette is chosen when the scene is built, so a theme change rebuilds it (render alone would keep the old colours)
 function applyTheme(t){ document.documentElement.dataset.theme=t; try{ localStorage.setItem(themeKey,t); }catch(e){} if(typeof build3d==="function") setTimeout(build3d,0); }
 try{ const t=localStorage.getItem(themeKey); if(t) document.documentElement.dataset.theme=t; }catch(e){}
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{ if(!document.documentElement.dataset.theme&&typeof build3d==="function") build3d(); });
 $("#btnTheme").onclick=()=>{ const cur=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"); applyTheme(cur==="dark"?"light":"dark"); };
 const isDark=()=>{ const t=document.documentElement.dataset.theme; return t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches; };
 
@@ -521,6 +522,9 @@ function scheduleAnalyze(){ clearTimeout(timer); $("#status").textContent="check
 // @@API-START  (the artifact build swaps these for the in-page engine)
 async function apiAnalyze(sp){ const r=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(sp)}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
 async function apiExample(){ return (await fetch("/api/examples/demo")).json(); }
+// the code summary of the massing on screen as an Excel workbook (local app only: the server builds it)
+async function apiSummaryXlsx(sp,name){ const r=await fetch("/api/summary.xlsx?name="+encodeURIComponent(name),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(sp)}); if(!r.ok) throw new Error(await r.text());
+  const url=URL.createObjectURL(await r.blob()); const a=document.createElement("a"); a.href=url; a.download=(r.headers.get("Content-Disposition")||"").match(/filename="([^"]+)"/)?.[1]||"code-summary.xlsx"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); }
 const ENGINE_LABEL="VBBL 2025";
 // @@API-END
 async function analyze(){
@@ -567,7 +571,7 @@ function drawResults(){
 // @@LIBRARY-START  (the artifact build replaces this section with the db-backed library)
 async function loadLib(){
   const r=await fetch("/api/iterations"); const items=await r.json();
-  $("#libList").innerHTML=items.map(it=>`<div class="it ${compareSel.includes(it.id)?"cmp":""}" data-id="${it.id}">${it.has_thumb?`<img src="/api/iterations/${it.id}/thumb.png">`:"<div></div>"}<div><div class="nm">${esc(it.name)}</div><div class="sub">${esc(it.project)} · ${(it.saved||"").replace("T"," ")} · ${Object.entries(it.summary||{}).map(([b,s])=>`${b}: ${s.storeys} st, ${fmt(s.area)} m², ${s.article||"—"}`).join(" · ")} · ${it.flags} flags</div></div><div>${it.has_pdf?`<a href="/api/iterations/${it.id}/summary.pdf" target="_blank" class="chip">PDF</a>`:""} <button class="sm del" data-id="${it.id}" title="delete">×</button></div></div>`).join("")||"<div class='hint'>Nothing saved yet.</div>";
+  $("#libList").innerHTML=items.map(it=>`<div class="it ${compareSel.includes(it.id)?"cmp":""}" data-id="${it.id}">${it.has_thumb?`<img src="/api/iterations/${it.id}/thumb.png">`:"<div></div>"}<div><div class="nm">${esc(it.name)}</div><div class="sub">${esc(it.project)} · ${(it.saved||"").replace("T"," ")} · ${Object.entries(it.summary||{}).map(([b,s])=>`${b}: ${s.storeys} st, ${fmt(s.area)} m², ${s.article||"—"}`).join(" · ")} · ${it.flags} flags</div></div><div>${it.has_xlsx?`<a href="/api/iterations/${it.id}/summary.xlsx" class="chip" title="code summary as an Excel workbook">Excel</a>`:""} <button class="sm del" data-id="${it.id}" title="delete">×</button></div></div>`).join("")||"<div class='hint'>Nothing saved yet.</div>";
   document.querySelectorAll(".lib .it").forEach(el=>el.onclick=async ev=>{ if(ev.target.closest("button,a")) return; const id=el.dataset.id;
     if(ev.shiftKey){ compareSel=compareSel.includes(id)?compareSel.filter(x=>x!==id):[...compareSel,id].slice(-3); $("#btnCompare").disabled=compareSel.length<2; loadLib(); return; }
     const d=await (await fetch("/api/iterations/"+id)).json(); spec=normalize(d.spec); sel=0; editStorey=null; changed(true); });
@@ -631,7 +635,7 @@ function showSummary(sp, r, name){
   const ds=r.determinations; const k=x=>x.key.split(".")[1];
   const flags=[...new Map(ds.flatMap(d=>d.flags.map(f=>[f,(d.block||"site")]))).entries()];
   const notes=((r.building||{}).notes||[]);
-  const html=`<div class="sumhead"><div><h2>${esc(sp.project_name)} — Building Code Analysis <span class="mono" style="font-size:12px;color:var(--mut)">${esc(name)}</span></h2><div class="hint">${esc(ENGINE_LABEL)} · ${sp.sprinklered?"sprinklered throughout":"not sprinklered"} · generated ${new Date().toISOString().slice(0,10)} · DRAFT for a registered professional's review — not a compliance determination. Massing-stage inputs: glazing ratios assumed, one occupancy per storey.</div></div><div><button class="sm" onclick="window.print()">Print</button> <button class="sm" onclick="document.getElementById('dlgSum').close()">Close</button></div></div>
+  const html=`<div class="sumhead"><div><h2>${esc(sp.project_name)} — Building Code Analysis <span class="mono" style="font-size:12px;color:var(--mut)">${esc(name)}</span></h2><div class="hint">${esc(ENGINE_LABEL)} · ${sp.sprinklered?"sprinklered throughout":"not sprinklered"} · generated ${new Date().toISOString().slice(0,10)} · DRAFT for a registered professional's review — not a compliance determination. Massing-stage inputs: glazing ratios assumed, one occupancy per storey.</div></div><div>${typeof apiSummaryXlsx==="function"?`<button class="sm pri" id="btnSumXlsx">Export to Excel</button> `:""}<button class="sm" onclick="window.print()">Print</button> <button class="sm" onclick="document.getElementById('dlgSum').close()">Close</button></div></div>
     ${sec("1","Building classification — major occupancies",ds.filter(d=>d.key.endsWith("major_occupancies")))}
     ${sec("2","Grade, first storey, building height and area",ds.filter(d=>["first_storey","basements","building_height_storeys","height_to_top_floor_m","building_area_m2"].includes(k(d))||d.key==="site.grade_m"))}
     ${sec("3","Governing article, Subsection 3.2.2",ds.filter(d=>k(d)==="article_candidates"||k(d)==="article"))}
@@ -646,6 +650,7 @@ function showSummary(sp, r, name){
     <section><h3><span class="n">·</span>Model notes</h3><ul class="fl">${notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul></section>
     <section><h3><span class="n">·</span>Not covered by this draft</h3><ul class="fl"><li>Egress layout — exit locations, dead ends, access to exit (3.3, 3.4.2.3–.4); only count, travel limit and width targets are computed</li><li>Washroom accessibility layout (3.8.3) — fixture counts only</li><li>Fire alarm, standpipe, sprinkler design (3.2.4, 3.2.5); firefighting access (3.2.5.4–.5)</li><li>High building (3.2.6); interior finishes, fire blocks (3.1.5, 3.1.11–.12); mass-timber limits (3.1.6, 3.2.2.93)</li><li>Energy (Part 10) and accessibility (3.8)</li></ul></section>`;
   $("#dlgSum .sumbody").innerHTML=html; $("#dlgSum").showModal();
+  const bx=$("#btnSumXlsx"); if(bx) bx.onclick=async()=>{ bx.disabled=true; bx.textContent="Building…"; try{ await apiSummaryXlsx(sp,name); toast("Excel workbook downloaded"); }catch(e){ toast("export failed: "+String(e.message||e).slice(0,120)); } finally{ bx.disabled=false; bx.textContent="Export to Excel"; } };
 }
 // ------------------------------------------------------------------ boot
 normalize(spec); hist.last=JSON.stringify(spec); updateHistBtns();

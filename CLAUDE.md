@@ -14,12 +14,13 @@ Built in a Claude Cowork session for Claudio (GenEnv, UBC). Continue here.
       spatial.py, table_3231.py   exposing faces, Tables 3.2.3.1-B/-C/-D, Table 3.2.3.7
       separations.py     Table 3.1.3.1 + notes (3),(4); 3.2.2.7 stacked occupancies
       targets.py         occupant load (Table 3.1.17.1), exits/travel/width (3.4.2, 3.4.3), washrooms (3.7.2, VBBL 3.7.2.9)
-      sheet.py           assembles the A3 code sheet (HTML → PDF via Playwright)
+      sheet.py           assembles the A3 code sheet (SheetData → HTML)
+      xlsx_sheet.py      the same SheetData as an Excel workbook (openpyxl): Code summary / Determinations / Flags & notes
       massing.py         MassingSpec (lot, blocks, per-storey footprints, holes, roof, context) → BuildingModel; analyze_massing()
       rhino_io.py        export_3dm / import_3dm with rhino3dm (layers Site / Context / Massing::<Block>::L<n>)
       export_engine_data.py → app/static/engine_data.json (tables shared with the JS port)
     app/
-      server.py          FastAPI: /api/analyze, /api/iterations, /api/rhino/*, /api/parcels, /api/presets
+      server.py          FastAPI: /api/analyze, /api/iterations (+ summary.xlsx per iteration), /api/summary.xlsx, /api/rhino/*, /api/parcels, /api/presets
       static/index.html  the UI (plan editor, three.js 3D, panels, results, Rhino panel, summary dialog)
       static/wizard.js   guided site / block questionnaires + parcel map picker
       static/engine.js   JavaScript port of the engine (kept equal to Python by tests/test_engine_js.py)
@@ -39,8 +40,7 @@ in the printed sheet.
 
 ## Run
 
-    pip install -r requirements.txt            # fastapi uvicorn pydantic plotly pypdf playwright pytest rhino3dm
-    python -m playwright install chromium      # PDF export only
+    pip install -r requirements.txt            # fastapi uvicorn pydantic plotly pypdf openpyxl pytest rhino3dm
     python -m pytest -q                        # public suite (+ private/ tests when that folder exists)
     python -m app.server --port 8765 --reload  # http://127.0.0.1:8765 ; --reload restarts on edits to app/ or codesheet/;
                                                # CODESHEET_FIXTURE=1 for an offline parcel map. The UI is served no-store, so a plain reload is current.

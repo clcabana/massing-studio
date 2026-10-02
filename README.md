@@ -34,19 +34,19 @@ Built in the UBC M.Arch course ARCH 540 (AI Workflows) as a Claude project, then
 
 The parcel map and the Rhino round trip need the local server and are switched off on the page.
 
-### The local app (parcel map, PDF sheets, Rhino)
+### The local app (parcel map, Excel code summaries, Rhino)
 
 Needs Python 3.11 or newer. From a clone of this repository:
 
 ```bash
 pip install -r requirements.txt
-python -m playwright install chromium      # once, only for the PDF code summary
 python -m app.server --port 8765
 ```
 
 Then open http://127.0.0.1:8765. The local app adds **Pick a site on the map**: the lot, plus the
 neighbouring buildings with LiDAR heights, the street trees and the street names, all from City of
-Vancouver Open Data. It saves iterations on disk under `projects/` with an A3 PDF code summary each,
+Vancouver Open Data. It saves iterations on disk under `projects/` with an Excel code summary each
+(**Export to Excel** in the Code summary dialog does the same for the massing on screen),
 and the **Rhino** panel exports a `.3dm`; edit the storeys in Rhino 7/8, save, and the analysis
 updates. `rhino3dm` is already in the requirements.
 
@@ -94,7 +94,8 @@ The rules actually evaluated, with the clause each one reads:
 | Gender-neutral washroom count (Vancouver amendment) | 3.7.2.9 | 320 |
 
 The by-law PDFs are **not** in the repository; the extracted JSON is enough to run everything. The
-clause links in the printed sheet open the PDF only when it sits beside the sheet.
+clause links in the HTML sheet open the PDF only when it sits beside the sheet; the Excel workbook
+cites the clause and page in their own columns.
 
 ## 4. One example
 

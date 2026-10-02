@@ -9,7 +9,9 @@ Endpoints (all JSON unless noted):
   POST /api/iterations              save {spec, name, note, thumbnail?} → writes a folder, returns the record
   GET  /api/iterations/{id}         spec + results of one iteration
   DELETE /api/iterations/{id}
-  GET  /api/iterations/{id}/summary.pdf   the code compliance summary sheet (generated on save)
+  GET  /api/iterations/{id}/summary.xlsx  the code compliance summary as an Excel workbook (generated on save)
+  GET  /api/iterations/{id}/summary.html  the same as an HTML sheet
+  POST /api/summary.xlsx            MassingSpec (+ ?name=) → the workbook for the massing on screen, without saving
   GET  /api/iterations/{id}/thumb.png
   GET  /api/examples/demo           the synthetic Courtyard Commons massing as a starting spec
   POST /api/rhino/export            {spec, path?} → writes site.3dm (layers: Site, Context, Massing::<Block>::L<n>), returns {path, mtime}
@@ -19,14 +21,14 @@ Endpoints (all JSON unless noted):
   GET  /                            the editor UI
 
 Iterations live on disk, one folder each, so a firm can keep them with the project:
-  <projects>/<slug>/iterations/<timestamp>-<name>/{spec.json, results.json, summary.html, summary.pdf, thumb.png}
+  <projects>/<slug>/iterations/<timestamp>-<name>/{spec.json, results.json, summary.html, summary.xlsx, thumb.png}
 """
 from __future__ import annotations
 
-import argparse, base64, datetime, json, os, pathlib, re, shutil, sys, time
+import argparse, base64, datetime, json, os, pathlib, re, shutil, sys, tempfile, time
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError
 
@@ -34,7 +36,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "data" / "projects")]
 
 from codesheet.massing import MassingSpec, analyze_massing, to_building_model     # noqa: E402
-from codesheet import sheet                                                       # noqa: E402
+from codesheet import sheet, xlsx_sheet                                           # noqa: E402
 from app import parcels as parcels_mod                                            # noqa: E402
 try:
     from codesheet import rhino_io                                                # noqa: E402
@@ -76,7 +78,7 @@ def _record(d: pathlib.Path) -> dict:
     meta = json.loads((d / "meta.json").read_text(encoding="utf-8")) if (d / "meta.json").exists() else {}
     return {"id": d.name, "project": spec.get("project_name"), "name": meta.get("name", d.name), "note": meta.get("note", ""),
             "saved": meta.get("saved"), "summary": res.get("summary"), "flags": len(res.get("flags", [])),
-            "has_pdf": (d / "summary.pdf").exists(), "has_thumb": (d / "thumb.png").exists()}
+            "has_xlsx": (d / "summary.xlsx").exists(), "has_thumb": (d / "thumb.png").exists()}
 
 
 @app.get("/api/iterations")
@@ -106,16 +108,38 @@ def save_iteration(req: SaveRequest):
             (d / "thumb.png").write_bytes(base64.b64decode(req.thumbnail_png_b64.split(",")[-1]))
         except Exception:
             pass
-    # compliance summary sheet
-    b = to_building_model(req.spec)
-    sd = sheet.run_all(b, chosen=req.spec.chosen_articles or None)
-    html_path = d / "summary.html"
-    html_path.write_text(sheet.render_html(sd, sheet_no="MS-01", revision=f"Massing iteration — {req.name}"), encoding="utf-8")
+    # compliance summary sheet: HTML to read, Excel to take away
+    sd = _sheet_data(req.spec)
+    revision = f"Massing iteration — {req.name}"
+    (d / "summary.html").write_text(sheet.render_html(sd, sheet_no="MS-01", revision=revision), encoding="utf-8")
     try:
-        sheet.to_pdf(html_path, d / "summary.pdf")
-    except Exception as e:                       # PDF is a convenience; never fail the save
-        (d / "pdf_error.txt").write_text(str(e), encoding="utf-8")
+        xlsx_sheet.to_xlsx(sd, d / "summary.xlsx", sheet_no="MS-01", revision=revision)
+    except Exception as e:                       # the workbook is a convenience; never fail the save
+        (d / "xlsx_error.txt").write_text(str(e), encoding="utf-8")
     return _record(d)
+
+
+def _sheet_data(spec: MassingSpec) -> sheet.SheetData:
+    return sheet.run_all(to_building_model(spec), chosen=spec.chosen_articles or None)
+
+
+XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+@app.post("/api/summary.xlsx")
+def summary_xlsx(spec: MassingSpec, name: str = "current massing"):
+    """The code summary workbook for the massing on screen, without saving an iteration."""
+    if not any(b.storeys for b in spec.blocks):
+        raise HTTPException(422, "nothing to summarise: the massing has no storeys")
+    try:
+        sd = _sheet_data(spec)
+    except (ValidationError, ValueError) as e:
+        raise HTTPException(422, f"could not analyse this massing: {e}")
+    with tempfile.TemporaryDirectory() as tmp:
+        p = xlsx_sheet.to_xlsx(sd, pathlib.Path(tmp) / "summary.xlsx", sheet_no="MS-00", revision=name)
+        data = p.read_bytes()
+    fname = f"{_slug(spec.project_name)}-code-summary.xlsx"
+    return Response(data, media_type=XLSX_MEDIA, headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
 
 def _find(iid: str) -> pathlib.Path:
@@ -137,12 +161,12 @@ def delete_iteration(iid: str):
     return {"ok": True}
 
 
-@app.get("/api/iterations/{iid}/summary.pdf")
-def iteration_pdf(iid: str):
-    f = _find(iid) / "summary.pdf"
+@app.get("/api/iterations/{iid}/summary.xlsx")
+def iteration_xlsx(iid: str):
+    f = _find(iid) / "summary.xlsx"
     if not f.exists():
-        raise HTTPException(404, "no PDF (see pdf_error.txt)")
-    return FileResponse(f, media_type="application/pdf", filename=f"{iid}-code-summary.pdf")
+        raise HTTPException(404, "no workbook (see xlsx_error.txt)")
+    return FileResponse(f, media_type=XLSX_MEDIA, filename=f"{iid}-code-summary.xlsx")
 
 
 @app.get("/api/iterations/{iid}/summary.html")
