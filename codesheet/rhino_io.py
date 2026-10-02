@@ -131,8 +131,13 @@ def export_3dm(spec: MassingSpec, path: str | pathlib.Path) -> pathlib.Path:
         m.Objects.AddExtrusion(trunk, _attrs(lay.get("Context::Trees"), t.name or "tree", kind="tree", x=t.x, y=t.y, height_m=t.height_m, crown_m=t.crown_m))
         m.Objects.AddBrep(rh.Brep.CreateFromSphere(rh.Sphere(_P(t.x, t.y, cz), cr)), _attrs(lay.get("Context::Trees"), t.name or "tree", kind="tree_crown"))
     # public realm: block outlines, lane and sidewalk strips as closed curves at z = 0 (City of Vancouver Open Data)
+    # (sidewalks are 150 mm curbs, the rest flat curves)
     for g in spec.ground:
-        m.Objects.AddCurve(_polyline([tuple(p) for p in g.footprint], 0.0), _attrs(lay.get(f"Context::Ground::{g.kind.capitalize()}s"), g.name or g.kind, kind=f"ground_{g.kind}", width_m=g.width_m, source=g.source or None))
+        at = _attrs(lay.get(f"Context::Ground::{g.kind.capitalize()}s"), g.name or g.kind, kind=f"ground_{g.kind}", width_m=g.width_m, source=g.source or None)
+        if g.kind == "sidewalk":
+            m.Objects.AddExtrusion(rh.Extrusion.Create(_polyline(_ccw([tuple(p) for p in g.footprint])), 0.15, True), at)
+        else:
+            m.Objects.AddCurve(_polyline([tuple(p) for p in g.footprint], 0.0), at)
     # street names: a text dot at the middle of each centreline
     for s in spec.streets:
         a, b = s.line[(len(s.line) - 1) // 2], s.line[len(s.line) // 2]
@@ -286,8 +291,8 @@ def import_3dm(path: str | pathlib.Path) -> tuple[MassingSpec, list[str]]:
                 trees.append(ContextTree(x=_num(a.GetUserString("x"), 0.0), y=_num(a.GetUserString("y"), 0.0), height_m=_num(a.GetUserString("height_m"), 8.0),
                                          crown_m=_num(a.GetUserString("crown_m"), 5.0), name=a.Name or ""))
                 continue
-            if kind in ("tree_crown", "street_name"):
-                continue
+            if kind in ("tree_crown", "street_name") or kind.startswith("ground_") or len(parts) > 1 and parts[1] == "Ground":
+                continue                             # the public realm comes back from the stored spec, not from its curves and curbs
             fz = _footprint_of(g)
             if fz:
                 context.append(ContextBuilding(name=a.Name or "neighbour", footprint=fz[0], height_m=max(0.5, fz[2]), source=a.GetUserString("source") or ""))

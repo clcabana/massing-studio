@@ -93,7 +93,7 @@ def test_fixture_ground_blocks_lanes_sidewalks():
     ctx = parcels.site_context(res["frame"], res["lot"]["polygon"], data["parcels"], data["streets"], lanes=data["lanes"], fixture_origin=p["origin"])
     G = ctx["ground"]
     kinds = [g["kind"] for g in G]
-    assert kinds.count("block") == 1 and kinds.count("lane") == 1 and kinds.count("sidewalk") == 3, kinds
+    assert kinds.count("block") == 1 and kinds.count("lane") == 1 and kinds.count("sidewalk") == 1, kinds   # three faces → one band round two corners
     block = next(g for g in G if g["kind"] == "block")
     poly = res["lot"]["polygon"]
     assert all(parcels._point_in_ring(q, block["footprint"]) or parcels._ring_project(q, block["footprint"])[0] < 0.1 for q in poly), "the lot lies in its block"
@@ -102,14 +102,32 @@ def test_fixture_ground_blocks_lanes_sidewalks():
     ys = [q[1] for q in lane["footprint"]]
     assert max(ys) - min(ys) == pytest.approx(6.1, abs=0.05)              # an E–W lane strip, 20 ft wide
     assert min(ys) > res["lot"]["depth_m"] - 0.1, "the lane runs behind the lot (north of it in this frame)"
-    for w in (g for g in G if g["kind"] == "sidewalk"):
-        assert w["width_m"] == parcels.SIDEWALK_W_M and "assumed" in w["source"] and w["name"].endswith("sidewalk")
-        c = parcels._centroid(w["footprint"])
-        assert not parcels._point_in_ring(c, block["footprint"]), "sidewalks lie in the right-of-way, outside the block"
-        assert parcels._ring_project(c, block["footprint"])[0] == pytest.approx(parcels.SIDEWALK_W_M / 2, abs=0.15), "against the property line"
-    front = next(g for g in G if g["kind"] == "sidewalk" and "11th" in g["name"])
-    assert all(-parcels.SIDEWALK_W_M - 0.1 < q[1] < 0.1 for q in front["footprint"]), "the front sidewalk hugs the lot's street edge (y = 0)"
-    assert "block-outlines" in ctx["context_source"] or ctx["context_source"].startswith("FIXTURE")
+    walk = next(g for g in G if g["kind"] == "sidewalk")
+    W = parcels.SIDEWALK_W_M
+    assert walk["width_m"] == W and "assumed" in walk["source"] and "curb" in walk["source"]
+    assert walk["name"] == "W 11th Ave N · W 12th Ave S · Yew St W sidewalk"
+    for q in walk["footprint"]:                                            # every vertex within the walk width outside the block
+        d = parcels._ring_project(q, block["footprint"])[0]
+        assert d <= W + 0.01 and (d < 0.02 or not parcels._point_in_ring(q, block["footprint"])), q
+    bx = max(p[0] for p in block["footprint"]); by0 = min(p[1] for p in block["footprint"]); by1 = max(p[1] for p in block["footprint"])
+    assert by0 == pytest.approx(0.0, abs=0.05), "the lot's street edge is the block's south property line"
+    assert any(abs(q[1] + W) < 0.02 for q in walk["footprint"]) and any(abs(q[0] - bx - W) < 0.02 for q in walk["footprint"]) and any(abs(q[1] - by1 - W) < 0.02 for q in walk["footprint"]), "outer edge on all three faces"
+    for cx, cy, sx, sy in ((bx, by0, 1, -1), (bx, by1, 1, 1)):            # the two block corners the band turns: a 45° arc point at radius W
+        assert any(math.hypot(q[0] - (cx + sx * W / math.sqrt(2)), q[1] - (cy + sy * W / math.sqrt(2))) < 0.03 for q in walk["footprint"]), "rounded corner"
+    assert len(walk["footprint"]) >= 4 + 2 + 2 * 7                        # 4 inner points, 2 square ends, two 90° arcs of ≥ 7 points
+    assert min(p[0] for p in walk["footprint"]) >= min(p[0] for p in block["footprint"]) - 0.01, "no sidewalk on the west face: the band ends square there"
+
+
+def test_band_rounds_convex_corners_and_mitres_concave_ones():
+    # a CCW chain with a right turn-left (convex) corner at (10,0) and a concave one at (10,10)→(20,10)
+    chain = [[0, 0], [10, 0], [10, 10], [20, 10]]
+    band = parcels._band(chain, 2.0)
+    assert band[:4] == [[0, 0], [10, 0], [10, 10], [20, 10]]               # inner edge is the chain itself
+    outer = band[4:][::-1]
+    assert outer[0] == [0, -2] and outer[-1] == [20, 8]                    # square ends offset to the right-hand side
+    arc = [q for q in outer if abs(math.hypot(q[0] - 10, q[1]) - 2.0) < 2e-3 and q[0] >= 10 and q[1] <= 0]
+    assert len(arc) >= 7 and any(abs(q[0] - (10 + 2 / math.sqrt(2))) < 2e-3 for q in arc), "a 90° arc of radius w around the convex corner"
+    assert [12, 8] in outer, "the concave corner is a mitre point"
 
 
 def test_street_label_from_hundred_block():

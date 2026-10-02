@@ -526,7 +526,8 @@ function build3d(){
   const decal=(pts,color,y,order)=>{ if(!pts||pts.length<3) return null; const g=new THREE.ShapeGeometry(shapeOf(pts)); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color,polygonOffset:true,polygonOffsetFactor:-order,polygonOffsetUnits:-order})); m.position.y=y; m.receiveShadow=true; massGroup.add(m); return g; };
   G.filter(g=>g.kind==="block").forEach(g=>{ const geo=decal(g.footprint,P.ground,-0.016,1); if(geo){ const e=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:P.line,transparent:true,opacity:.45})); e.position.y=-0.016; massGroup.add(e); } });
   G.filter(g=>g.kind==="lane").forEach(g=>decal(g.footprint,P.row,-0.012,2));
-  G.filter(g=>g.kind==="sidewalk").forEach(g=>decal(g.footprint,P.walk,-0.008,3));
+  // sidewalks stand up as a 150 mm curb; their rounded corners come from the server's band geometry
+  G.filter(g=>g.kind==="sidewalk").forEach(g=>{ if(!g.footprint||g.footprint.length<3) return; const geo=new THREE.ExtrudeGeometry(shapeOf(g.footprint),{depth:0.15,bevelEnabled:false}); geo.rotateX(-Math.PI/2); const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:P.walk})); m.position.y=-0.01; m.castShadow=m.receiveShadow=true; massGroup.add(m); const e=new THREE.LineSegments(new THREE.EdgesGeometry(geo,20),new THREE.LineBasicMaterial({color:P.line,transparent:true,opacity:.3})); e.position.y=-0.01; massGroup.add(e); });
   // ROW bands (a lot described by hand: no block outlines to show the street, so shade the declared right-of-way)
   if(!L.polygon&&!hasBlocks){ const E=L.edges; const bandMat=k=>new THREE.MeshLambertMaterial({color:k==="street"?P.street:P.lane,transparent:true,opacity:.9});
     const band=(x,z,w,d,k)=>{ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),bandMat(k)); m.rotation.x=-Math.PI/2; m.position.set(x,-0.01,z); m.receiveShadow=true; massGroup.add(m); };

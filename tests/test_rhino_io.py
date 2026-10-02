@@ -121,6 +121,8 @@ def test_trees_and_street_names_round_trip(tmp_path):
     assert {"Context::Neighbours", "Context::Trees", "Context::Street names", "Context::Ground::Blocks", "Context::Ground::Lanes", "Context::Ground::Sidewalks"} <= paths
     assert sum(1 for o in m.Objects if o.Attributes.GetUserString("kind") == "tree") == 2
     assert sum(1 for o in m.Objects if (o.Attributes.GetUserString("kind") or "").startswith("ground_")) == 3
+    walk = next(o for o in m.Objects if o.Attributes.GetUserString("kind") == "ground_sidewalk")
+    assert isinstance(walk.Geometry, rh.Extrusion) and walk.Geometry.GetBoundingBox().Max.Z == pytest.approx(0.15, abs=1e-6), "sidewalks are 150 mm curbs"
     spec2, warnings = rhino_io.import_3dm(p)
     assert warnings == []
     assert [t.model_dump() for t in spec2.trees] == [t.model_dump() for t in spec.trees]

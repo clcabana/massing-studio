@@ -65,6 +65,7 @@ STREET_MAX_M, LANE_MAX_M = 28.0, 9.0      # a centreline farther than this is no
 CONTEXT_RADIUS_M = 90.0                    # neighbours, trees and street names this far from the lot centre
 EST_HOUSE_M, EST_GARAGE_M = 8.5, 3.0       # heights when no 2009 LiDAR footprint matches (built after 2009)
 SIDEWALK_W_M = 1.8                         # nominal walk width; the City's inventory gives the side, not the width
+CURB_M = 0.15                              # the sidewalk's extrusion height in 3D and in the Rhino file (a standard 150 mm curb)
 LANE_W_M = 6.1                             # 20 ft, the standard Vancouver lane, when no right-of-way-widths point is on the lane
 SIDEWALK_MATCH_M = 25.0                    # a sidewalk line farther than this from every block outline is not drawn
 FIXTURE = os.environ.get("CODESHEET_FIXTURE") == "1"
@@ -414,22 +415,101 @@ def ground_patches(T, lot_centre, radius_m: float, blocks_ll: list, lanes_ll: li
         width = w[1] if w[0] <= 12 else LANE_W_M
         out.append({"kind": "lane", "footprint": _strip(pts, width / 2, -width / 2), "name": "lane", "width_m": round(width, 2),
                     "source": f"{src} lanes · width " + ("right-of-way-widths" if w[0] <= 12 else f"{LANE_W_M} m assumed (no right-of-way-widths point on this lane)")})
+    # sidewalks: each City line says "this face of this block has a sidewalk"; the faces of one block are then
+    # joined into continuous bands that turn the block's corners with a curve
+    spans: dict[int, list] = {}
     for name, line in walks_ll:
         pts = [T(p) for p in line]
         if len(pts) < 2 or not near(pts, radius_m + 40) or not blocks:
             continue
         mid = pts[len(pts) // 2]
-        d, ring = min(((_ring_project(mid, r)[0], r) for r in blocks), key=lambda x: x[0])
+        d, bi = min(((_ring_project(mid, r)[0], i) for i, r in enumerate(blocks)), key=lambda x: x[0])
         if d > SIDEWALK_MATCH_M:
             continue
-        s0 = _ring_project(pts[0], ring)[1]; s1 = _ring_project(pts[-1], ring)[1]
-        edge = _ring_slice(ring, s0, s1)
-        if len(edge) < 2 or _polyline_len(edge) < 2.0:
-            continue
-        out.append({"kind": "sidewalk", "footprint": _strip(edge, 0.0, SIDEWALK_W_M), "name": f"{street_label(name)} sidewalk".strip(),
-                    "width_m": SIDEWALK_W_M,
-                    "source": f"{src} sidewalk-condition-rating (which block faces have a sidewalk) · drawn {SIDEWALK_W_M} m wide against the property line: position and width assumed"})
+        ring = blocks[bi]
+        spans.setdefault(bi, []).append((_ring_project(pts[0], ring)[1], _ring_project(pts[-1], ring)[1], street_label(name)))
+    for bi, sp in spans.items():
+        for chain, names in _sidewalk_runs(blocks[bi], sp):
+            out.append({"kind": "sidewalk", "footprint": _band(chain, SIDEWALK_W_M), "name": " · ".join(names) + " sidewalk",
+                        "width_m": SIDEWALK_W_M,
+                        "source": f"{src} sidewalk-condition-rating (which block faces have a sidewalk) · drawn {SIDEWALK_W_M} m wide against the property line with {CURB_M * 1000:.0f} mm curb, corners rounded: position, width and corners assumed"})
     return out
+
+
+def _sidewalk_runs(ring: list, spans: list) -> list[tuple[list, list[str]]]:
+    """Which edges of the ring carry a sidewalk (an edge counts when the City's lines cover ≥ 40 % of it),
+    grouped into runs of consecutive edges → [(chain of points, street names)]. A fully ringed block is one
+    run opened at its straightest vertex, where the square seam is invisible."""
+    n = len(ring)
+    cum = [0.0]
+    for i in range(n):
+        a, b = ring[i], ring[(i + 1) % n]
+        cum.append(cum[-1] + math.hypot(b[0] - a[0], b[1] - a[1]))
+    per = cum[-1] or 1e-9
+    cov = [0.0] * n; names: list[set] = [set() for _ in range(n)]
+    for s0, s1, name in spans:
+        fwd = (s1 - s0) % per
+        if fwd > per / 2:
+            s0, s1 = s1, s0; fwd = per - fwd
+        a = s0 % per; b = a + fwd
+        for i in range(n):
+            for off in (0.0, per):
+                ov = min(b, cum[i + 1] + off) - max(a, cum[i] + off)
+                if ov > 0:
+                    cov[i] += ov; names[i].add(name)
+    on = [cov[i] >= 0.4 * (cum[i + 1] - cum[i]) for i in range(n)]
+    if not any(on):
+        return []
+    if all(on):                                       # open the ring where it bends least
+        def turn(i):
+            a, p, b = ring[i - 1], ring[i], ring[(i + 1) % n]
+            return abs(math.atan2((p[0] - a[0]) * (b[1] - p[1]) - (p[1] - a[1]) * (b[0] - p[0]), (p[0] - a[0]) * (b[0] - p[0]) + (p[1] - a[1]) * (b[1] - p[1])))
+        k = min(range(n), key=turn)
+        chain = [ring[(k + j) % n] for j in range(n + 1)]
+        return [(chain, sorted(set().union(*names)))]
+    # start after an uncovered edge, then collect maximal covered runs
+    start = next(i for i in range(n) if not on[i])
+    runs = []; cur = None
+    for j in range(1, n + 1):
+        i = (start + j) % n
+        if on[i]:
+            if cur is None:
+                cur = ([ring[i]], set())
+            cur[0].append(ring[(i + 1) % n]); cur[1].update(names[i])
+        elif cur is not None:
+            runs.append((cur[0], sorted(cur[1]))); cur = None
+    if cur is not None:
+        runs.append((cur[0], sorted(cur[1])))
+    return runs
+
+
+def _band(chain: list, w: float) -> list:
+    """The polygon between a CCW chain and its outward offset by w. Convex corners get a tangent arc of radius w
+    (the way a sidewalk wraps a block corner), concave corners a mitre, the two ends are square."""
+    pts = [list(p) for p in chain]
+    k = len(pts) - 1
+    dirs = []
+    for i in range(k):
+        ux, uy = pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]; L = math.hypot(ux, uy) or 1.0
+        dirs.append((ux / L, uy / L))
+    nrm = [(d[1], -d[0]) for d in dirs]                           # right-hand normal: outward for a CCW ring
+    off = lambda p, v, d=w: [round(p[0] + v[0] * d, 3), round(p[1] + v[1] * d, 3)]
+    outer = [off(pts[0], nrm[0])]
+    for i in range(1, k):
+        d0, d1 = dirs[i - 1], dirs[i]; n0, n1 = nrm[i - 1], nrm[i]; p = pts[i]
+        ang = math.atan2(d0[0] * d1[1] - d0[1] * d1[0], d0[0] * d1[0] + d0[1] * d1[1])   # signed turn, + = left = convex
+        if ang > 0.05:
+            a0 = math.atan2(n0[1], n0[0]); steps = max(2, math.ceil(ang / (math.pi / 12)))
+            for t in range(steps + 1):
+                a = a0 + ang * t / steps
+                outer.append(off(p, (math.cos(a), math.sin(a))))
+        elif ang < -0.05:
+            mx, my = n0[0] + n1[0], n0[1] + n1[1]; L = math.hypot(mx, my) or 1.0
+            outer.append(off(p, (mx / L, my / L), w / max(0.3, math.cos(ang / 2))))
+        else:
+            outer.append(off(p, n0))
+    outer.append(off(pts[-1], nrm[-1]))
+    return [[round(x, 3), round(y, 3)] for x, y in pts] + outer[::-1]
 
 
 # ---------------------------------------------------------------------------- site context
